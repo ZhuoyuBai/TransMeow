@@ -1,16 +1,19 @@
-<p align="center">
-  <img src="icons/icon-128.png" width="96" height="96" alt="翻译喵 TransMeow Logo">
-</p>
-
-<h1 align="center">翻译喵 TransMeow</h1>
-
-## 免费版的沉浸式翻译
-
-使用翻译喵，无需注册账号、充值会员、购买 AI 算力或配置 API Key。
+<div align="center">
+  <img src="icons/icon-128.png" width="88" height="88" alt="翻译喵 TransMeow Logo">
+  <h1>翻译喵 TransMeow</h1>
+  <h3>免费版的沉浸式翻译</h3>
+  <p>使用翻译喵，无需注册账号、充值会员、购买 AI 算力或配置 API Key。</p>
+</div>
 
 <p align="center">
-  <img src="docs/images/translation-popup.png" width="520" alt="翻译喵网页翻译弹窗">
+  <img src="docs/images/transmeow-promo.png" width="100%" alt="翻译喵宣传图：免费版的沉浸式翻译">
 </p>
+
+<p align="center">
+  <img src="docs/images/translation-popup.png" width="480" alt="翻译喵网页翻译弹窗">
+</p>
+
+<br>
 
 ## 快速开始
 
