@@ -2,5 +2,9 @@
   "appName": {
     "message": "翻譯喵",
     "description": "擴充功能名稱"
+  },
+  "appDescription": {
+    "message": "免費，快速的本地翻譯擴充功能",
+    "description": "擴充功能描述"
   }
 }

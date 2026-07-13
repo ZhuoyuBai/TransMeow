@@ -63,10 +63,6 @@
         </button>
       </section>
 
-      <footer class="model-note">
-        <span aria-hidden="true">i</span>
-        <span data-i18n="modelNote">语言包由 Chrome 提供和管理。目前扩展只能下载，暂不支持直接卸载。</span>
-      </footer>
       </section>
 
       <section id="appearance-panel" class="settings-panel" hidden>
@@ -132,13 +128,11 @@
               <h2 data-i18n="alwaysTranslateSites">总是翻译的网站</h2>
               <p data-i18n="alwaysTranslateSitesDesc">这些网站会在打开时自动翻译，名单仅保存在本机</p>
             </div>
-            <span id="always-translate-sites-count" class="site-rules-count"></span>
           </div>
           <div id="always-translate-sites-list" class="site-rules-list" role="list" aria-live="polite"></div>
           <p id="always-translate-sites-empty" class="site-rules-empty" data-i18n="noAlwaysTranslateSites">
             暂无总是翻译的网站
           </p>
-          <span id="site-rules-action-status" class="site-rules-action-status" role="status"></span>
         </section>
       </section>
     </main>
@@ -146,10 +140,12 @@
     <template id="model-row-template">
       <article class="model-row">
         <div class="language-info">
-          <span class="language-symbol"></span>
-          <div>
-            <strong class="language-name"></strong>
-            <span class="language-pair"></span>
+          <div class="language-copy">
+            <div class="language-heading">
+              <strong class="language-name"></strong>
+              <span class="language-code"></span>
+            </div>
+            <span class="language-native-name"></span>
           </div>
         </div>
         <div class="model-status">

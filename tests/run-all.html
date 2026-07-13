@@ -23,7 +23,8 @@
 
     <script>
       const cases = [
-        { file: "cache-replay.html", allTrue: ["pageRestored", "langPairRestored", "cachedTextVisible", "navRestored", "navIconPreserved", "cacheCompletionReported", "legacyPageIndexMigrated", "missingUiFilled", "onlyMissingUiRequested"] },
+        { file: "cache-replay.html", allTrue: ["pageRestored", "partialReplayStillWorking", "langPairRestored", "cachedTextVisible", "navRestored", "navIconPreserved", "noEarlyCacheCompletion", "legacyPageIndexMigrated", "missingUiFilled", "onlyMissingUiRequested", "singleSettledCompletion"] },
+        { file: "prepared-snapshot-reconciliation.html", allTrue: ["initialSnapshotCollected", "stableContentTranslated", "replacementContentTranslated", "lateContentTranslated", "staleSnapshotNotTranslated", "settledCompletionReported"] },
         { file: "cancel.html", expect: { completed: "true", aborted: "true", allTranslated: "false" } },
         { file: "dynamic-content-page.html", expect: { segmentCount: "3", navAnchorCount: "0", sideAnchorCount: "1", shadowAnchorCount: "1", translationIsInPlace: "true", staleEnglishRemoved: "true" } },
         { file: "error-recovery.html", expect: { completed: "true", failedSegments: "1", doomedRecovered: "true", doomedStillMarkedFailed: "false" } },

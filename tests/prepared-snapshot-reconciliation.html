@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Prepared snapshot reconciliation fixture</title>
+    <script>
+      globalThis.__sentMessages = [];
+      globalThis.__translationInputs = [];
+      globalThis.chrome = {
+        storage: {
+          local: {
+            async get() {
+              return { cacheEnabled: false };
+            },
+            async set() {}
+          }
+        },
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage(message) {
+            globalThis.__sentMessages.push(message);
+            return Promise.resolve();
+          }
+        }
+      };
+      globalThis.Translator = {
+        async availability() {
+          return "available";
+        },
+        async create() {
+          return {
+            async translate(text) {
+              globalThis.__translationInputs.push(text);
+              return `[译] ${text}`;
+            },
+            destroy() {}
+          };
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <main id="content">
+      <p id="stable">Stable server-rendered content should still be translated.</p>
+      <p id="hydrated">Server placeholder that hydration will replace.</p>
+    </main>
+
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        globalThis.__contentMessageListener(
+          { type: "collect-segments" },
+          null,
+          (pageData) => {
+            document.body.dataset.initialSnapshotCollected = String(
+              pageData.segments.length === 2
+            );
+
+            const replacement = document.createElement("p");
+            replacement.id = "hydrated";
+            replacement.textContent =
+              "Hydrated replacement content must be translated instead.";
+            document.querySelector("#hydrated").replaceWith(replacement);
+
+            const lateContent = document.createElement("p");
+            lateContent.id = "late-content";
+            lateContent.textContent =
+              "Late client-rendered content must join the same translation run.";
+            document.querySelector("#content").append(lateContent);
+
+            globalThis.__contentMessageListener(
+              {
+                type: "start-translation",
+                sourceLanguage: "en",
+                targetLanguage: "zh",
+                scope: "all",
+                cacheEnabled: false
+              },
+              null,
+              () => {}
+            );
+
+            const poll = setInterval(() => {
+              const completion = globalThis.__sentMessages.find(
+                (message) => message.type === "translation-complete"
+              );
+              if (!completion) return;
+              clearInterval(poll);
+
+              document.body.dataset.stableContentTranslated = String(
+                document.querySelector("#stable").innerText.startsWith("[译]")
+              );
+              document.body.dataset.replacementContentTranslated = String(
+                document.querySelector("#hydrated").innerText.startsWith("[译]")
+              );
+              document.body.dataset.lateContentTranslated = String(
+                document
+                  .querySelector("#late-content")
+                  .innerText.startsWith("[译]")
+              );
+              document.body.dataset.staleSnapshotNotTranslated = String(
+                !globalThis.__translationInputs.includes(
+                  "Server placeholder that hydration will replace."
+                )
+              );
+              document.body.dataset.settledCompletionReported = String(
+                completion.total === 3 &&
+                  completion.translated === 3 &&
+                  completion.failed === 0
+              );
+              document.body.dataset.testComplete = "true";
+            }, 25);
+          }
+        );
+      });
+    </script>
+  </body>
+</html>

@@ -456,10 +456,6 @@ h2 {
     background 120ms ease;
 }
 
-.primary-button:hover {
-  background: var(--accent-hover);
-}
-
 .primary-button:active {
   transform: translateY(1px);
 }
