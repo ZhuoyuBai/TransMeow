@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Inline-rich hero slogan fixture</title>
+    <script>
+      globalThis.chrome = {
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage() {
+            return Promise.resolve();
+          }
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <main>
+      <div id="slogan" style="display: block; font-size: 64px">
+        <span>YC turns builders</span><br />
+        <span>into <em>formidable founders</em></span><sup>[1]</sup>
+      </div>
+      <div id="card-aggregate" style="display: block">
+        <div style="display: block">First independent card description.</div>
+        <div style="display: block">Second independent card description.</div>
+        <div style="display: block">Third independent card description.</div>
+      </div>
+    </main>
+
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        const slogan = document.querySelector("#slogan");
+        globalThis.__contentMessageListener(
+          { type: "collect-segments" },
+          null,
+          (result) => {
+            const sloganSegment = result.segments.find((segment) =>
+              segment.text.includes("YC turns builders")
+            );
+            if (sloganSegment) {
+              globalThis.__contentMessageListener(
+                {
+                  type: "insert-translation",
+                  id: sloganSegment.id,
+                  text: "YC 将建设者培养成强大的创始人[1]",
+                  richNodeTexts: [
+                    "YC 将建设者",
+                    "培养成 ",
+                    "强大的创始人",
+                    "[1]"
+                  ]
+                },
+                null,
+                () => {}
+              );
+            }
+
+            document.body.dataset.sloganCollected = String(Boolean(sloganSegment));
+            document.body.dataset.sloganSingleSource = String(
+              slogan.hasAttribute("data-local-translator-source") &&
+                slogan.querySelectorAll("[data-local-translator-source]").length === 0
+            );
+            document.body.dataset.inlineStructurePreserved = String(
+              Boolean(slogan.querySelector("br")) &&
+                Boolean(slogan.querySelector("em")) &&
+                Boolean(slogan.querySelector("sup"))
+            );
+            document.body.dataset.sloganTranslatedInPlace = String(
+              slogan.innerText.includes("强大的创始人")
+            );
+            document.body.dataset.aggregateContainerUntouched = String(
+              !document
+                .querySelector("#card-aggregate")
+                .hasAttribute("data-local-translator-source")
+            );
+            document.body.dataset.testComplete = "true";
+          }
+        );
+      });
+    </script>
+  </body>
+</html>

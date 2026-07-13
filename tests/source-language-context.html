@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Source-language-agnostic context fixture</title>
+    <script>
+      globalThis.__translationInputs = [];
+      globalThis.chrome = {
+        i18n: {
+          async detectLanguage(text) {
+            if (text === "Mercados bursatiles") {
+              return { languages: [{ language: "pt", percentage: 65 }] };
+            }
+            if (text === "Configuración avanzada") {
+              return { languages: [{ language: "es", percentage: 100 }] };
+            }
+            if (text === "English help") {
+              return { languages: [{ language: "en", percentage: 100 }] };
+            }
+            if (/[㐀-鿿]/u.test(text)) {
+              return { languages: [{ language: "zh-CN", percentage: 100 }] };
+            }
+            return { languages: [{ language: "es", percentage: 100 }] };
+          }
+        },
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage() {
+            return Promise.resolve();
+          }
+        }
+      };
+      globalThis.Translator = {
+        async availability() {
+          return "available";
+        },
+        async create() {
+          return {
+            async translate(text) {
+              globalThis.__translationInputs.push(text);
+              return `[traducido] ${text}`;
+            },
+            destroy() {}
+          };
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <main>
+      <h2 id="detected-spanish">Configuración avanzada</h2>
+      <h2 id="context-spanish">Mercados bursatiles</h2>
+      <h2 id="english">English help</h2>
+      <h2 id="chinese">中文帮助</h2>
+    </main>
+
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        globalThis.__contentMessageListener(
+          {
+            type: "start-translation",
+            sourceLanguage: "es",
+            targetLanguage: "zh"
+          },
+          null,
+          () => {}
+        );
+
+        setTimeout(() => {
+          const translated = (id) =>
+            document.querySelector(`#${id}`).hasAttribute(
+              "data-local-translator-target"
+            );
+          document.body.dataset.detectedSourceTranslated = String(
+            translated("detected-spanish")
+          );
+          document.body.dataset.contextSourceTranslated = String(
+            translated("context-spanish")
+          );
+          document.body.dataset.nonSourceTranslated = String(
+            translated("english") && translated("chinese")
+          );
+          document.body.dataset.allSegmentsSent = String(
+            globalThis.__translationInputs.some((text) =>
+              text.includes("English help")
+            ) &&
+              globalThis.__translationInputs.some((text) =>
+                text.includes("中文帮助")
+              )
+          );
+          document.body.dataset.testComplete = "true";
+        }, 500);
+      });
+    </script>
+  </body>
+</html>

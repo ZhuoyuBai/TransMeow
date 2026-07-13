@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Cancel fixture — 翻译中止</title>
+    <script>
+      globalThis.__sentMessages = [];
+      globalThis.chrome = {
+        i18n: {
+          async detectLanguage() {
+            return { languages: [{ language: "en", percentage: 100 }] };
+          }
+        },
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage(msg) {
+            globalThis.__sentMessages.push(msg);
+            return Promise.resolve();
+          }
+        }
+      };
+      // translate 加延迟，让 cancel 有机会在翻译中途介入
+      globalThis.Translator = {
+        async availability() {
+          return "available";
+        },
+        async create() {
+          return {
+            async translate(text) {
+              await new Promise((r) => setTimeout(r, 30));
+              return `[译] ${text}`;
+            },
+            destroy() {}
+          };
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <main>
+      <article>
+        <p>Paragraph one.</p>
+        <p>Paragraph two.</p>
+        <p>Paragraph three.</p>
+        <p>Paragraph four.</p>
+        <p>Paragraph five.</p>
+      </article>
+    </main>
+
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        globalThis.__contentMessageListener(
+          { type: "start-translation", sourceLanguage: "en", targetLanguage: "zh" },
+          null,
+          () => {}
+        );
+
+        // 翻译开始后立即发 cancel
+        setTimeout(() => {
+          globalThis.__contentMessageListener(
+            { type: "cancel-translation" },
+            null,
+            () => {}
+          );
+        }, 40);
+
+        // 等翻译流程结束（aborted 或跑完）
+        setTimeout(() => {
+          const sent = globalThis.__sentMessages;
+          const completeMsg = sent.find(
+            (m) => m.type === "translation-complete"
+          );
+
+          document.body.dataset.completed = completeMsg ? "true" : "false";
+          document.body.dataset.aborted = String(completeMsg?.aborted || false);
+
+          // 中止后译文数应 < 总段数 5
+          const translations = document.querySelectorAll(
+            "[data-local-translator-target]"
+          );
+          document.body.dataset.translationCount = String(translations.length);
+          document.body.dataset.allTranslated = String(translations.length === 5);
+
+          document.body.dataset.testComplete = "true";
+        }, 400);
+      });
+    </script>
+  </body>
+</html>

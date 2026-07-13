@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Rich text preservation fixture</title>
+    <script>
+      globalThis.__sentMessages = [];
+      globalThis.chrome = {
+        i18n: {
+          async detectLanguage() {
+            return { languages: [{ language: "en", percentage: 100 }] };
+          }
+        },
+        storage: {
+          local: {
+            async get() { return {}; },
+            async set() {}
+          }
+        },
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage(message) {
+            globalThis.__sentMessages.push(message);
+            return Promise.resolve();
+          }
+        }
+      };
+
+      const translations = new Map([
+        ["Build", "构建"],
+        ["your idea with", "你的想法，使用"],
+        ["trusted links", "可信链接"],
+        ["and keep", "并保留"],
+        ["inline emphasis", "行内强调"],
+        ["without changing", "而不改变"],
+        ["code samples.", "代码示例。"]
+        , ["Fallback", "回退机制"]
+        , ["still preserves", "仍然保留"]
+        , ["its link.", "它的链接。"]
+      ]);
+
+      globalThis.Translator = {
+        async availability() { return "available"; },
+        async create() {
+          return {
+            async translate(text) {
+              if (text.includes("Fallback") && text.includes("\ue000")) {
+                return "markers removed by model";
+              }
+              if (!text.includes("\ue000")) {
+                return translations.get(text.trim()) || `[译]${text.trim()}`;
+              }
+              return text.replace(
+                /\ue000(\d+)\ue001([\s\S]*?)\ue002\1\ue003/gu,
+                (_match, index, value) =>
+                  `\ue000${index}\ue001${translations.get(value.trim()) || `[译]${value.trim()}`}\ue002${index}\ue003`
+              );
+            },
+            destroy() {}
+          };
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <p id="rich-copy">
+      <strong id="strong-node">Build</strong> your idea with
+      <a id="trusted-link" href="#destination"><span>trusted links</span></a>
+      and keep <em id="emphasis-node">inline emphasis</em> without changing
+      <code id="code-node">const answer = 42;</code> code samples.
+    </p>
+    <p id="fallback-copy">
+      <strong>Fallback</strong> still preserves
+      <a id="fallback-link" href="#destination">its link.</a>
+    </p>
+    <div id="destination">Destination</div>
+
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        const source = document.querySelector("#rich-copy");
+        const originalHtml = source.innerHTML;
+        const originalStrong = document.querySelector("#strong-node");
+        const originalLink = document.querySelector("#trusted-link");
+        const originalEmphasis = document.querySelector("#emphasis-node");
+        const originalCode = document.querySelector("#code-node");
+        let clickCount = 0;
+        originalLink.addEventListener("click", (event) => {
+          event.preventDefault();
+          clickCount += 1;
+        });
+
+        globalThis.__contentMessageListener(
+          {
+            type: "start-translation",
+            sourceLanguage: "en",
+            targetLanguage: "zh",
+            scope: "all",
+            cacheEnabled: false
+          },
+          null,
+          () => {}
+        );
+
+        setTimeout(() => {
+          originalLink.click();
+          document.body.dataset.translationNodesPreserved = String(
+            document.querySelector("#strong-node") === originalStrong &&
+            document.querySelector("#trusted-link") === originalLink &&
+            document.querySelector("#emphasis-node") === originalEmphasis &&
+            document.querySelector("#code-node") === originalCode
+          );
+          document.body.dataset.translationInteractionPreserved = String(clickCount === 1);
+          document.body.dataset.translationHrefPreserved = String(
+            originalLink.getAttribute("href") === "#destination"
+          );
+          document.body.dataset.translationFormattingPreserved = String(
+            originalStrong.textContent === "构建" &&
+            originalLink.textContent.trim() === "可信链接" &&
+            originalEmphasis.textContent === "行内强调"
+          );
+          document.body.dataset.codePreserved = String(
+            originalCode.textContent === "const answer = 42;"
+          );
+          document.body.dataset.markerFallbackPreserved = String(
+            document.querySelector("#fallback-copy strong")?.textContent === "回退机制" &&
+            document.querySelector("#fallback-link")?.textContent === "它的链接。" &&
+            document.querySelector("#fallback-link")?.getAttribute("href") === "#destination"
+          );
+          document.body.dataset.markerFallbackText =
+            document.querySelector("#fallback-copy")?.textContent.trim() || "";
+
+          globalThis.__contentMessageListener(
+            { type: "set-display-mode", mode: "bilingual" },
+            null,
+            () => {}
+          );
+
+          setTimeout(() => {
+            const clone = source.nextElementSibling;
+            document.body.dataset.bilingualRichClone = String(
+              clone?.classList.contains("local-translator-result") &&
+              clone.querySelector("strong")?.textContent === "构建" &&
+              clone.querySelector("a")?.getAttribute("href") === "#destination" &&
+              clone.querySelector("code")?.textContent === "const answer = 42;"
+            );
+            document.body.dataset.noDuplicateIds = String(
+              clone && clone.querySelectorAll("[id]").length === 0
+            );
+
+            globalThis.__contentMessageListener(
+              { type: "set-display-mode", mode: "original" },
+              null,
+              () => {}
+            );
+
+            setTimeout(() => {
+              document.body.dataset.originalMarkupRestored = String(
+                source.innerHTML === originalHtml
+              );
+              document.body.dataset.originalNodesRestored = String(
+                document.querySelector("#strong-node") === originalStrong &&
+                document.querySelector("#trusted-link") === originalLink &&
+                document.querySelector("#emphasis-node") === originalEmphasis &&
+                document.querySelector("#code-node") === originalCode
+              );
+              originalLink.click();
+              document.body.dataset.originalInteractionRestored = String(clickCount === 2);
+              document.body.dataset.testComplete = "true";
+            }, 80);
+          }, 80);
+        }, 350);
+      });
+    </script>
+  </body>
+</html>

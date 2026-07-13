@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>X and Reddit content unit fixture</title>
+    <style>
+      [data-testid="tweetText"],
+      [slot="title"],
+      [slot="comment"] {
+        display: block;
+      }
+    </style>
+    <script>
+      globalThis.chrome = {
+        i18n: {
+          async detectLanguage() {
+            return { languages: [{ language: "en", percentage: 100 }] };
+          }
+        },
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage() {
+            return Promise.resolve();
+          }
+        }
+      };
+
+      globalThis.Translator = {
+        async availability() {
+          return "available";
+        },
+        async create() {
+          return {
+            async translate(text) {
+              if (text.includes("\ue001")) {
+                return text.replaceAll("\ue001", "\ue001[译] ");
+              }
+              return `[译] ${text}`;
+            },
+            destroy() {}
+          };
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <main>
+      <article>
+        <div id="tweet" data-testid="tweetText">
+          A post with <a href="/first">one mention</a> and
+          <a href="/second">another mention</a> must remain one content unit.
+        </div>
+      </article>
+      <reddit-card>
+        <span id="reddit-title" slot="title">
+          A Reddit title exposed through a Web Component slot
+        </span>
+        <div id="reddit-comment" slot="comment">
+          A Reddit comment exposed through a Web Component slot.
+        </div>
+      </reddit-card>
+    </main>
+
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        globalThis.__contentMessageListener(
+          {
+            type: "start-translation",
+            sourceLanguage: "en",
+            targetLanguage: "zh",
+            scope: "all"
+          },
+          null,
+          () => {}
+        );
+
+        setTimeout(() => {
+          const tweet = document.querySelector("#tweet");
+          const redditTitle = document.querySelector("#reddit-title");
+          const redditComment = document.querySelector("#reddit-comment");
+          document.body.dataset.allPlatformUnitsTranslated = String(
+            [tweet, redditTitle, redditComment].every(
+              (node) =>
+                node.hasAttribute("data-local-translator-target") &&
+                node.textContent.includes("[译]")
+            )
+          );
+          document.body.dataset.tweetLinksPreserved = String(
+            Boolean(
+              tweet.querySelectorAll("a[href]").length === 2 &&
+                tweet.querySelector('a[href="/first"]') &&
+                tweet.querySelector('a[href="/second"]')
+            )
+          );
+          document.body.dataset.testComplete = "true";
+        }, 500);
+      });
+    </script>
+  </body>
+</html>

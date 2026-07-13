@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Semantic page fixture</title>
+    <script>
+      globalThis.chrome = {
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage() {
+            return Promise.resolve();
+          }
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>A semantic article title</h1>
+        <p>This is the first semantic article paragraph.</p>
+        <p>This is the second semantic article paragraph.</p>
+        <a href="/linked-post" style="display: block">
+          A standalone linked post title must also be collected.
+        </a>
+      </article>
+    </main>
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        globalThis.__contentMessageListener(
+          { type: "collect-segments" },
+          null,
+          (result) => {
+            document.body.dataset.segmentCount = String(result.segments.length);
+            document.body.dataset.anchorCount = String(
+              document.querySelectorAll("[data-local-translator-source]").length
+            );
+
+            for (const segment of result.segments) {
+              globalThis.__contentMessageListener(
+                {
+                  type: "insert-translation",
+                  id: segment.id,
+                  text: `译文 ${segment.id}`
+                },
+                null,
+                () => {}
+              );
+            }
+
+            document.body.dataset.translationCount = String(
+              document.querySelectorAll("[data-local-translator-target]").length
+            );
+            document.body.dataset.inPlaceTranslationCount = String(
+              document.querySelectorAll(
+                "[data-local-translator-source][data-local-translator-target]"
+              ).length
+            );
+
+            globalThis.__contentMessageListener(
+              { type: "set-display-mode", mode: "original" },
+              null,
+              () => {}
+            );
+            document.body.dataset.originalModeTargetCount = String(
+              document.querySelectorAll("[data-local-translator-target]").length
+            );
+
+            globalThis.__contentMessageListener(
+              { type: "set-display-mode", mode: "bilingual" },
+              null,
+              () => {}
+            );
+            document.body.dataset.bilingualVisibleOriginalCount = String(
+              Array.from(
+                document.querySelectorAll(
+                  "[data-local-translator-source]"
+                )
+              ).filter((node) => getComputedStyle(node).display !== "none").length
+            );
+            document.body.dataset.bilingualVisibleTranslationCount = String(
+              Array.from(
+                document.querySelectorAll(".local-translator-result")
+              ).filter((node) => getComputedStyle(node).display !== "none").length
+            );
+
+            globalThis.__contentMessageListener(
+              { type: "restore-original" },
+              null,
+              () => {}
+            );
+            document.body.dataset.restoredTranslationCount = String(
+              document.querySelectorAll("[data-local-translator-target]").length
+            );
+            document.body.dataset.restoredHiddenCount = String(
+              document.querySelectorAll('[style*="display: none"]').length
+            );
+            document.body.dataset.restoredOriginalWrapperCount = String(
+              document.querySelectorAll(
+                "[data-local-translator-target]"
+              ).length
+            );
+          }
+        );
+      });
+    </script>
+  </body>
+</html>

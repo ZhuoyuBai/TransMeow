@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>翻译喵</title>
+    <link rel="stylesheet" href="theme.css" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body data-i18n-page-title="brandName">
+    <main class="popup-shell">
+      <header class="brand-row">
+        <img
+          class="brand-mark"
+          src="icons/icon-128.png"
+          width="44"
+          height="44"
+          alt=""
+        />
+        <div>
+          <h1 data-i18n="brandName">翻译喵</h1>
+          <p data-i18n="tagline">免费的本地化翻译服务</p>
+        </div>
+        <button id="open-settings" class="header-settings" type="button" aria-label="设置" data-i18n-aria-label="settings" data-tooltip="设置">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
+            <path d="M19.4 13.5a7.8 7.8 0 0 0 .05-1.5 7.8 7.8 0 0 0-.05-1.5l2-1.55-2-3.46-2.45 1a7.7 7.7 0 0 0-2.6-1.5L14 2.35h-4L9.65 5a7.7 7.7 0 0 0-2.6 1.5l-2.45-1-2 3.46 2 1.55A7.8 7.8 0 0 0 4.55 12c0 .5.02 1 .05 1.5l-2 1.55 2 3.46 2.45-1a7.7 7.7 0 0 0 2.6 1.5l.35 2.64h4l.35-2.64a7.7 7.7 0 0 0 2.6-1.5l2.45 1 2-3.46-2-1.55Z" />
+          </svg>
+        </button>
+      </header>
+
+      <section class="language-row" aria-label="翻译语言">
+        <div class="language-card custom-select" data-select-id="source-language">
+          <button class="custom-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+            <strong class="custom-select-value">自动检测</strong>
+            <span class="select-chevron" aria-hidden="true"></span>
+          </button>
+          <span class="language-caption" data-i18n="sourceLanguage">原文语言</span>
+          <div class="custom-select-menu" role="listbox" hidden></div>
+          <select id="source-language" class="select-state" tabindex="-1" aria-hidden="true">
+            <option value="auto" data-i18n="autoDetect">自动检测</option>
+          </select>
+        </div>
+
+        <span class="language-arrow" aria-hidden="true">→</span>
+
+        <div class="language-card custom-select" data-select-id="target-language">
+          <button class="custom-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+            <strong class="custom-select-value">简体中文</strong>
+            <span class="select-chevron" aria-hidden="true"></span>
+          </button>
+          <span class="language-caption" data-i18n="targetLanguage">目标语言</span>
+          <div class="custom-select-menu" role="listbox" hidden></div>
+          <select id="target-language" class="select-state" tabindex="-1" aria-hidden="true">
+          </select>
+        </div>
+      </section>
+
+      <section class="translation-card" aria-label="翻译设置">
+        <div class="action-row">
+        <button
+          id="display-mode-button"
+          class="display-mode-button"
+          type="button"
+          aria-label="切换译文显示模式"
+          data-tooltip="当前为仅译文&#10;点击切换为双语对照"
+        >
+          <span class="display-mode-icon" aria-hidden="true">A</span>
+          <span id="display-mode-label" class="sr-only" data-i18n="onlyTranslation">仅译文</span>
+        </button>
+
+        <button id="translate-button" class="primary-button" type="button">
+          <span data-i18n="translate">翻译</span>
+        </button>
+        </div>
+
+        <div id="progress-area" class="progress-area" hidden>
+          <div class="progress-labels">
+            <span id="progress-label" data-i18n="translating">正在翻译</span>
+            <strong id="progress-percent">0%</strong>
+          </div>
+          <progress id="translation-progress" max="100" value="0"></progress>
+        </div>
+      </section>
+
+      <section class="site-preference-card">
+        <div class="site-preference-label">
+          <strong data-i18n="alwaysTranslate">总是翻译该网站</strong>
+        </div>
+        <label class="switch-control">
+          <input id="always-translate-site" type="checkbox" disabled />
+          <span aria-hidden="true"></span>
+          <span class="sr-only" data-i18n="alwaysTranslate">总是翻译该网站</span>
+        </label>
+      </section>
+
+      <div id="status-card" class="status-line" role="status" aria-live="polite" hidden>
+        <span id="status-dot" class="status-dot"></span>
+        <span id="status-text"></span>
+      </div>
+
+    </main>
+
+    <script src="languages.js"></script>
+    <script src="i18n.js"></script>
+    <script src="theme.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

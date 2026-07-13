@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Atomic navigation label fixture</title>
+    <script>
+      globalThis.chrome = {
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage() {
+            return Promise.resolve();
+          }
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a id="about" href="/about">About<svg aria-hidden="true"><path /></svg></a>
+        <button id="resources" type="button">
+          <span>Resources</span><svg aria-hidden="true"><path /></svg>
+        </button>
+        <p id="nav-prose">
+          This long navigation description is structural chrome, not an atomic label.
+        </p>
+      </nav>
+    </header>
+    <aside>
+      <label id="customers">
+        <input type="checkbox" />Customers
+      </label>
+      <button id="design" type="button">Design</button>
+    </aside>
+    <main>
+      <p id="content">A normal article paragraph should still be collected.</p>
+    </main>
+
+    <script>
+      document.querySelector("#about").addEventListener("click", (event) => {
+        event.preventDefault();
+        document.body.dataset.aboutClicked = "true";
+      });
+    </script>
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        const about = document.querySelector("#about");
+        const resources = document.querySelector("#resources");
+        const customers = document.querySelector("#customers");
+        const design = document.querySelector("#design");
+        globalThis.__contentMessageListener(
+          { type: "collect-segments" },
+          null,
+          (result) => {
+            const byText = new Map(result.segments.map((segment) => [segment.text, segment]));
+            const aboutSegment = byText.get("About");
+            const resourcesSegment = byText.get("Resources");
+            const customersSegment = byText.get("Customers");
+            const designSegment = byText.get("Design");
+            if (aboutSegment) {
+              globalThis.__contentMessageListener(
+                {
+                  type: "insert-translation",
+                  id: aboutSegment.id,
+                  text: "关于",
+                  richNodeTexts: ["关于"]
+                },
+                null,
+                () => {}
+              );
+            }
+            if (resourcesSegment) {
+              globalThis.__contentMessageListener(
+                {
+                  type: "insert-translation",
+                  id: resourcesSegment.id,
+                  text: "资源",
+                  richNodeTexts: ["资源"]
+                },
+                null,
+                () => {}
+              );
+            }
+            if (customersSegment) {
+              globalThis.__contentMessageListener(
+                {
+                  type: "insert-translation",
+                  id: customersSegment.id,
+                  text: "客户",
+                  richNodeTexts: ["客户"]
+                },
+                null,
+                () => {}
+              );
+            }
+            if (designSegment) {
+              globalThis.__contentMessageListener(
+                { type: "insert-translation", id: designSegment.id, text: "设计" },
+                null,
+                () => {}
+              );
+            }
+
+            about.click();
+            document.body.dataset.aboutCollected = String(Boolean(aboutSegment));
+            document.body.dataset.resourcesCollected = String(Boolean(resourcesSegment));
+            document.body.dataset.pageControlsCollected = String(
+              Boolean(customersSegment) && Boolean(designSegment)
+            );
+            document.body.dataset.navProseExcluded = String(
+              !byText.has(document.querySelector("#nav-prose").innerText.trim())
+            );
+            document.body.dataset.labelsTranslated = String(
+              about.innerText.trim() === "关于" && resources.innerText.trim() === "资源"
+            );
+            document.body.dataset.iconsPreserved = String(
+              Boolean(about.querySelector("svg")) && Boolean(resources.querySelector("svg"))
+            );
+            document.body.dataset.hrefPreserved = String(
+              about.getAttribute("href") === "/about"
+            );
+            document.body.dataset.interactionPreserved = String(
+              document.body.dataset.aboutClicked === "true"
+            );
+            document.body.dataset.pageControlsTranslated = String(
+              customers.innerText.trim() === "客户" &&
+                design.innerText.trim() === "设计"
+            );
+            document.body.dataset.checkboxPreserved = String(
+              Boolean(customers.querySelector("input[type='checkbox']"))
+            );
+            document.body.dataset.testComplete = "true";
+          }
+        );
+      });
+    </script>
+  </body>
+</html>

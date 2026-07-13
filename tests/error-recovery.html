@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Error recovery fixture — 单段容错</title>
+    <script>
+      globalThis.__sentMessages = [];
+      globalThis.chrome = {
+        i18n: {
+          async detectLanguage() {
+            return { languages: [{ language: "en", percentage: 100 }] };
+          }
+        },
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage(msg) {
+            globalThis.__sentMessages.push(msg);
+            return Promise.resolve();
+          }
+        }
+      };
+      // Translator stub：第 2 段翻译抛错，验证单段失败不中止整页。
+      let callCount = 0;
+      globalThis.Translator = {
+        async availability() {
+          return "available";
+        },
+        async create() {
+          return {
+            async translate(text) {
+              callCount += 1;
+              if (callCount === 2) {
+                throw new Error("模拟单段翻译失败");
+              }
+              return `[译] ${text}`;
+            },
+            destroy() {}
+          };
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <main>
+      <article>
+        <p>First paragraph will translate fine.</p>
+        <p id="doomed">Second paragraph will fail to translate.</p>
+        <p>Third paragraph should still translate after the failure.</p>
+      </article>
+    </main>
+
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        globalThis.__contentMessageListener(
+          { type: "start-translation", sourceLanguage: "en", targetLanguage: "zh" },
+          null,
+          () => {}
+        );
+
+        setTimeout(() => {
+          const sent = globalThis.__sentMessages;
+          const completeMsg = sent.find(
+            (m) => m.type === "translation-complete"
+          );
+
+          // 验证翻译完成（未因单段失败而中止）
+          document.body.dataset.completed = completeMsg ? "true" : "false";
+          document.body.dataset.totalSegments = String(completeMsg?.total || 0);
+          document.body.dataset.failedSegments = String(completeMsg?.failed || 0);
+
+          // 验证失败段被标记
+          const doomed = document.querySelector("#doomed");
+          document.body.dataset.doomedMarkedFailed = String(
+            doomed.hasAttribute("data-local-translator-failed")
+          );
+
+          // 验证第 1、3 段仍被翻译
+          const translations = document.querySelectorAll(
+            "[data-local-translator-target]"
+          );
+          document.body.dataset.translationCount = String(translations.length);
+
+          // 验证失败段没有译文 span（或译文为空）
+          const doomedTranslation = doomed.querySelector(
+            "[data-local-translator-target]"
+          );
+          document.body.dataset.doomedHasTranslation = doomedTranslation
+            ? "true"
+            : "false";
+
+          // 测试 retry-failed
+          callCount = 0; // 重置，让重试时不再抛错
+          globalThis.__contentMessageListener(
+            { type: "retry-failed" },
+            null,
+            () => {}
+          );
+
+          setTimeout(() => {
+            const doomedAfterRetry = document.querySelector(
+              "#doomed[data-local-translator-target]"
+            );
+            document.body.dataset.doomedRecovered = doomedAfterRetry
+              ? "true"
+              : "false";
+            document.body.dataset.doomedStillMarkedFailed = String(
+              doomed.hasAttribute("data-local-translator-failed")
+            );
+            document.body.dataset.testComplete = "true";
+          }, 200);
+        }, 200);
+      });
+    </script>
+  </body>
+</html>

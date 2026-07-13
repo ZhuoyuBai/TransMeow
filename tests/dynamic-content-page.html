@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Dynamic multi-region page fixture</title>
+    <script>
+      globalThis.chrome = {
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage() {
+            return Promise.resolve();
+          }
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <nav>
+      <p>This long navigation label must not be treated as page content.</p>
+    </nav>
+    <main>
+      <article>
+        <p id="dynamic-post">
+          A framework-rendered post whose original content may be inserted again.
+        </p>
+      </article>
+    </main>
+    <aside>
+      <div id="side-card" style="display: block">
+        A related story in a secondary content rail should be translated too.
+      </div>
+      <section id="shadow-side-card"></section>
+    </aside>
+
+    <script>
+      document
+        .querySelector("#shadow-side-card")
+        .attachShadow({ mode: "open" }).innerHTML = `
+          <div id="shadow-content" style="display: block">
+            A componentized side card inside an open shadow root is content too.
+          </div>
+        `;
+    </script>
+
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        globalThis.__contentMessageListener(
+          { type: "collect-segments" },
+          null,
+          (result) => {
+            document.body.dataset.segmentCount = String(result.segments.length);
+            document.body.dataset.navAnchorCount = String(
+              document.querySelectorAll("nav [data-local-translator-source]")
+                .length
+            );
+            document.body.dataset.sideAnchorCount = String(
+              document.querySelectorAll("aside [data-local-translator-source]")
+                .length
+            );
+            const shadowRoot = document
+              .querySelector("#shadow-side-card")
+              .shadowRoot;
+            document.body.dataset.shadowAnchorCount = String(
+              shadowRoot.querySelectorAll("[data-local-translator-source]")
+                .length
+            );
+
+            for (const segment of result.segments) {
+              globalThis.__contentMessageListener(
+                {
+                  type: "insert-translation",
+                  id: segment.id,
+                  text: `中文译文 ${segment.id}`
+                },
+                null,
+                () => {}
+              );
+            }
+
+            const post = document.querySelector("#dynamic-post");
+            post.append(
+              document.createTextNode(" Stale English text reinserted by framework."),
+              Object.assign(document.createElement("span"), {
+                textContent: " Another stale original node."
+              })
+            );
+
+            setTimeout(() => {
+              document.body.dataset.visiblePostText = post.innerText
+                .replace(/\s+/g, " ")
+                .trim();
+              // 译文原位渲染；框架重新塞回的英文子节点应被清掉。
+              document.body.dataset.translationIsInPlace = String(
+                post.hasAttribute("data-local-translator-target")
+              );
+              document.body.dataset.staleEnglishRemoved = String(
+                !post.innerText.includes("Stale English") &&
+                !post.innerText.includes("Another stale")
+              );
+              document.body.dataset.visibleShadowText = shadowRoot
+                .querySelector("#shadow-content")
+                .innerText.replace(/\s+/g, " ")
+                .trim();
+              document.body.dataset.testComplete = "true";
+            }, 0);
+          }
+        );
+      });
+    </script>
+  </body>
+</html>

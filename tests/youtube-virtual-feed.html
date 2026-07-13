@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>YouTube virtual feed regression fixture</title>
+    <style>
+      ytd-rich-grid-renderer,
+      #deferred-feed,
+      h3 {
+        display: block;
+      }
+      ytd-rich-item-renderer,
+      .metadata {
+        display: contents;
+      }
+    </style>
+    <script>
+      globalThis.__sentMessages = [];
+      globalThis.chrome = {
+        i18n: {
+          async detectLanguage(text) {
+            // 模拟 Chrome 对英文短标题的不稳定检测，以及
+            // “英文标题 + 中文统计”被整体判为中文的情况。
+            if (text.includes("玩了")) {
+              return { languages: [{ language: "zh", percentage: 90 }] };
+            }
+            if (text === "My Mini Mart") {
+              return { languages: [{ language: "und", percentage: 0 }] };
+            }
+            return { languages: [{ language: "en", percentage: 100 }] };
+          }
+        },
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage(message) {
+            globalThis.__sentMessages.push(message);
+            return Promise.resolve();
+          }
+        }
+      };
+      globalThis.Translator = {
+        async availability() {
+          return "available";
+        },
+        async create() {
+          return {
+            async translate(text) {
+              if (text.includes("\ue001")) {
+                return text.replaceAll("\ue001", "\ue001[译] ");
+              }
+              return `[译] ${text}`;
+            },
+            destroy() {}
+          };
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <main>
+      <ytd-rich-grid-renderer id="feed">
+        <ytd-rich-item-renderer>
+          <h3>First visible video title</h3>
+          <span class="metadata">First Channel · 12 minutes ago · 12:34</span>
+        </ytd-rich-item-renderer>
+        <ytd-rich-item-renderer>
+          <h3>Second visible video title</h3>
+          <span class="metadata">Second Channel · 2 days ago · 45:06</span>
+        </ytd-rich-item-renderer>
+        <ytd-rich-item-renderer id="playable-card">
+          <a href="#play">
+            <yt-formatted-string id="title">My Mini Mart</yt-formatted-string>
+            <span class="metadata">玩了 4584 万次</span>
+          </a>
+        </ytd-rich-item-renderer>
+        <section id="deferred-feed" hidden>
+          <ytd-rich-item-renderer>
+            <h3>Third dynamically revealed video title</h3>
+            <span class="metadata">Third Channel · 5 hours ago · 08:21</span>
+          </ytd-rich-item-renderer>
+          <ytd-rich-item-renderer>
+            <h3>Fourth dynamically revealed video title</h3>
+            <span class="metadata">Fourth Channel · 1 week ago · 51:09</span>
+          </ytd-rich-item-renderer>
+        </section>
+        <section id="watch-content">
+          <ytd-text-inline-expander>
+            <div id="snippet">
+              <yt-attributed-string id="attributed-snippet-text">
+                A complete English description with
+                <a href="https://example.com/one">the first link</a>
+                and <a href="https://example.com/two">the second link</a>.
+              </yt-attributed-string>
+            </div>
+          </ytd-text-inline-expander>
+          <ytd-comment-view-model>
+            <yt-attributed-string id="content-text">
+              A dynamically rendered English comment from the current YouTube UI.
+            </yt-attributed-string>
+          </ytd-comment-view-model>
+        </section>
+      </ytd-rich-grid-renderer>
+    </main>
+
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        const feed = document.querySelector("#feed");
+        const deferredFeed = document.querySelector("#deferred-feed");
+        const originalFeedChildren = feed.children.length;
+        const originalDeferredChildren = deferredFeed.children.length;
+
+        globalThis.__contentMessageListener(
+          {
+            type: "start-translation",
+            sourceLanguage: "en",
+            targetLanguage: "zh"
+          },
+          null,
+          () => {}
+        );
+
+        setTimeout(() => {
+          // YouTube 会持续切换虚拟列表和延迟区块的显隐状态。
+          deferredFeed.hidden = false;
+
+          setTimeout(() => {
+            const titles = Array.from(
+              document.querySelectorAll("h3, yt-formatted-string#title")
+            );
+            document.body.dataset.feedStructurePreserved = String(
+              feed.children.length === originalFeedChildren &&
+                deferredFeed.children.length === originalDeferredChildren
+            );
+            document.body.dataset.aggregateContainersUntouched = String(
+              !feed.hasAttribute("data-local-translator-source") &&
+                !feed.hasAttribute("data-local-translator-target") &&
+                !deferredFeed.hasAttribute("data-local-translator-source") &&
+                !deferredFeed.hasAttribute("data-local-translator-target")
+            );
+            document.body.dataset.allTitlesTranslated = String(
+              titles.length === 5 &&
+                titles.every(
+                  (title) =>
+                    title.hasAttribute("data-local-translator-target") &&
+                    title.textContent.startsWith("[译]")
+                )
+            );
+            document.body.dataset.playableMetadataPreserved = String(
+              document.querySelector("#playable-card .metadata").textContent ===
+                "玩了 4584 万次"
+            );
+            const description = document.querySelector(
+              "#attributed-snippet-text"
+            );
+            const comment = document.querySelector("#content-text");
+            document.body.dataset.newYoutubeUnitsTranslated = String(
+              description.hasAttribute("data-local-translator-target") &&
+                description.textContent.includes("[译]") &&
+                description.querySelectorAll("a[href]").length === 2 &&
+                comment.hasAttribute("data-local-translator-target") &&
+                comment.textContent.includes("[译]")
+            );
+
+            // YouTube/X 的虚拟列表会复用同一个标题节点。模拟框架把已翻译
+            // 的节点改成下一张卡片，旧译文绝不能覆盖新标题。
+            const recycledTitle = titles[0];
+            const oldId = recycledTitle.getAttribute(
+              "data-local-translator-source"
+            );
+            recycledTitle.textContent = "Recycled virtual card title";
+
+            setTimeout(() => {
+              document.body.dataset.recycledTitleRetranslated = String(
+                recycledTitle.textContent ===
+                  "[译] Recycled virtual card title" &&
+                  recycledTitle.getAttribute(
+                    "data-local-translator-source"
+                  ) !== oldId
+              );
+              document.body.dataset.testComplete = "true";
+            }, 800);
+          }, 800);
+        }, 250);
+      });
+    </script>
+  </body>
+</html>

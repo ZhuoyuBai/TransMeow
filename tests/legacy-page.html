@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Legacy page fixture</title>
+    <script>
+      globalThis.chrome = {
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage() {
+            return Promise.resolve();
+          }
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <table>
+      <tr>
+        <td>
+          <font size="2" face="verdana">
+            June 2026<br /><br />
+            This is the first legacy paragraph with enough text to translate.<br /><br />
+            This is the second paragraph containing an <a href="#">inline link</a>
+            and <i>italic text</i>.<br /><br />
+            This is the final paragraph.<br /><br />
+          </font>
+        </td>
+      </tr>
+    </table>
+
+    <script>
+      const legacyContainer = document.querySelector("font");
+      for (let index = 1; index <= 20; index += 1) {
+        legacyContainer.append(
+          document.createTextNode(
+            `Generated legacy paragraph ${index}. ${"A sufficiently long sentence for extraction testing. ".repeat(5)}`
+          ),
+          document.createElement("br"),
+          document.createElement("br")
+        );
+      }
+    </script>
+
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        globalThis.__contentMessageListener(
+          { type: "collect-segments" },
+          null,
+          (result) => {
+            document.body.dataset.segmentCount = String(result.segments.length);
+            document.body.dataset.segmentTexts = result.segments
+              .map((segment) => segment.text)
+              .join("|");
+
+            for (const segment of result.segments) {
+              globalThis.__contentMessageListener(
+                {
+                  type: "insert-translation",
+                  id: segment.id,
+                  text: `译文 ${segment.id}`
+                },
+                null,
+                () => {}
+              );
+            }
+
+            document.body.dataset.translationCount = String(
+              document.querySelectorAll(".local-translator-result").length
+            );
+            document.body.dataset.hiddenSourceCount = String(
+              document.querySelectorAll(
+                '[data-local-translator-legacy-source][style*="display: none"]'
+              ).length
+            );
+
+            globalThis.__contentMessageListener(
+              { type: "restore-original" },
+              null,
+              () => {}
+            );
+            document.body.dataset.restoredTranslationCount = String(
+              document.querySelectorAll(".local-translator-result").length
+            );
+            document.body.dataset.restoredLegacyWrapperCount = String(
+              document.querySelectorAll("[data-local-translator-legacy-source]")
+                .length
+            );
+          }
+        );
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Shell class reveal regression fixture</title>
+    <style>
+      #sidebar { display: none; }
+      html.sidebar-expanded #sidebar { display: block; }
+    </style>
+    <script>
+      globalThis.__sentMessages = [];
+      globalThis.chrome = {
+        i18n: {
+          async detectLanguage() {
+            return { languages: [{ language: "en", percentage: 100 }] };
+          }
+        },
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage(message) {
+            globalThis.__sentMessages.push(message);
+            return Promise.resolve();
+          }
+        }
+      };
+      globalThis.Translator = {
+        async availability() {
+          return "available";
+        },
+        async create() {
+          return {
+            async translate(text) {
+              return `[译] ${text}`;
+            },
+            destroy() {}
+          };
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <main><p>Initially visible article text.</p></main>
+    <aside id="sidebar">
+      <p id="revealed-text">Content revealed only by a class on the html shell.</p>
+    </aside>
+
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        globalThis.__contentMessageListener(
+          {
+            type: "start-translation",
+            sourceLanguage: "en",
+            targetLanguage: "zh"
+          },
+          null,
+          () => {}
+        );
+
+        const completionPoll = setInterval(() => {
+          const complete = globalThis.__sentMessages.find(
+            (message) =>
+              message.type === "translation-complete" && !message.incremental
+          );
+          if (!complete) return;
+          clearInterval(completionPoll);
+          document.documentElement.classList.add("sidebar-expanded");
+
+          setTimeout(() => {
+            const revealed = document.querySelector("#revealed-text");
+            document.body.dataset.shellRevealTranslated = String(
+              revealed.hasAttribute("data-local-translator-target") &&
+                revealed.textContent.startsWith("[译]")
+            );
+            document.body.dataset.testComplete = "true";
+          }, 1100);
+        }, 20);
+      });
+    </script>
+  </body>
+</html>

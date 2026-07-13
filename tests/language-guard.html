@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Per-segment language guard fixture</title>
+    <script>
+      globalThis.__sentMessages = [];
+      globalThis.__translationInputs = [];
+      globalThis.chrome = {
+        i18n: {
+          async detectLanguage(text) {
+            if (text === "My Mini Mart") {
+              return { languages: [{ language: "und", percentage: 0 }] };
+            }
+            if (text === "Build products people want") {
+              return {
+                languages: [
+                  { language: "nl", percentage: 55 },
+                  { language: "en", percentage: 45 }
+                ]
+              };
+            }
+            if (text === "Jokes") {
+              return { languages: [{ language: "da", percentage: 65 }] };
+            }
+            if (text === "Bill Gates") {
+              return { languages: [{ language: "it", percentage: 65 }] };
+            }
+            if (text === "Warren Buffett’s Mid-Meeting Live Interview") {
+              return { languages: [{ language: "nl", percentage: 65 }] };
+            }
+            if (text === "Bonjour tout le monde") {
+              return { languages: [{ language: "fr", percentage: 100 }] };
+            }
+            if (/[㐀-鿿]/u.test(text)) {
+              return { languages: [{ language: "zh-CN", percentage: 100 }] };
+            }
+            if (/\b(?:hola|español|gracias)\b/i.test(text)) {
+              return { languages: [{ language: "es", percentage: 100 }] };
+            }
+            return { languages: [{ language: "en", percentage: 100 }] };
+          }
+        },
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage(message) {
+            globalThis.__sentMessages.push(message);
+            return Promise.resolve();
+          }
+        }
+      };
+      globalThis.Translator = {
+        async availability() {
+          return "available";
+        },
+        async create() {
+          return {
+            async translate(text) {
+              globalThis.__translationInputs.push(text);
+              return `[译] ${text}`;
+            },
+            destroy() {}
+          };
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <main id="feed">
+      <h2 id="english">How to build a durable business</h2>
+      <h2 id="short-english">My Mini Mart</h2>
+      <div id="misdetected-english" data-testid="tweetText">
+        Build products people want
+      </div>
+      <h2 id="misdetected-menu">Jokes</h2>
+      <h2 id="misdetected-name">Bill Gates</h2>
+      <h2 id="misdetected-card-title">
+        Warren Buffett’s Mid-Meeting Live Interview
+      </h2>
+      <h2 id="chinese">普通人想阶级跨越，千万不要打工</h2>
+      <h2 id="spanish">Hola, este video está en español</h2>
+      <h2 id="local-french" lang="fr">Bonjour tout le monde</h2>
+    </main>
+
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        globalThis.__contentMessageListener(
+          {
+            type: "start-translation",
+            sourceLanguage: "en",
+            targetLanguage: "zh"
+          },
+          null,
+          () => {}
+        );
+
+        setTimeout(() => {
+          const dynamicChinese = document.createElement("h2");
+          dynamicChinese.id = "dynamic-chinese";
+          dynamicChinese.textContent = "这是动态加载的中文标题";
+          const dynamicEnglish = document.createElement("h2");
+          dynamicEnglish.id = "dynamic-english";
+          dynamicEnglish.textContent = "A dynamically loaded English title";
+          document.querySelector("#feed").append(dynamicChinese, dynamicEnglish);
+
+          setTimeout(() => {
+            const translated = (id) =>
+              document.querySelector(`#${id}`).hasAttribute(
+                "data-local-translator-target"
+              );
+            document.body.dataset.englishTranslated = String(
+              translated("english")
+            );
+            document.body.dataset.shortEnglishTranslated = String(
+              translated("short-english")
+            );
+            document.body.dataset.misdetectedEnglishTranslated = String(
+              translated("misdetected-english")
+            );
+            document.body.dataset.misdetectedMenuTranslated = String(
+              translated("misdetected-menu")
+            );
+            document.body.dataset.misdetectedNameTranslated = String(
+              translated("misdetected-name")
+            );
+            document.body.dataset.misdetectedCardTitleTranslated = String(
+              translated("misdetected-card-title")
+            );
+            document.body.dataset.chineseTranslated = String(
+              translated("chinese")
+            );
+            document.body.dataset.thirdLanguageTranslated = String(
+              translated("spanish")
+            );
+            document.body.dataset.localLanguageTranslated = String(
+              translated("local-french")
+            );
+            document.body.dataset.dynamicChineseTranslated = String(
+              translated("dynamic-chinese")
+            );
+            document.body.dataset.dynamicEnglishTranslated = String(
+              translated("dynamic-english")
+            );
+            document.body.dataset.allCollectedSent = String(
+              globalThis.__translationInputs.some((text) =>
+                text.includes("普通人想阶级跨越")
+              ) &&
+                globalThis.__translationInputs.some((text) =>
+                  text.includes("español")
+                ) &&
+                globalThis.__translationInputs.some((text) =>
+                  text.includes("Bonjour")
+                ) &&
+                globalThis.__translationInputs.some((text) =>
+                  text.includes("这是动态加载的中文标题")
+                )
+            );
+            document.body.dataset.testComplete = "true";
+          }, 700);
+        }, 250);
+      });
+    </script>
+  </body>
+</html>

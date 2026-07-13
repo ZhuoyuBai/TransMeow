@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mixed-language dynamic page fixture</title>
+    <script>
+      globalThis.chrome = {
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage() {
+            return Promise.resolve();
+          }
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <aside id="chinese-interface"></aside>
+    <main>
+      <article>
+        <a href="/post/example" class="random-generated-post-content">
+          We're on track to hit four million dollars in annual recurring revenue.
+        </a>
+      </article>
+      <article>
+        <div class="another-unknown-content-class">这是一条不应该翻译的中文动态。</div>
+      </article>
+    </main>
+
+    <script>
+      document.querySelector("#chinese-interface").textContent =
+        "主页 探索 通知 聊天 推荐关注 创作者工作室 ".repeat(80);
+    </script>
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        globalThis.__contentMessageListener(
+          { type: "collect-segments" },
+          null,
+          (result) => {
+            document.body.dataset.segmentCount = String(result.segments.length);
+            document.body.dataset.anchorCount = String(
+              document.querySelectorAll("[data-local-translator-source]").length
+            );
+          }
+        );
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>翻译喵 — 回归测试</title>
+    <style>
+      body { margin: 32px auto; max-width: 960px; font: 14px/1.5 system-ui, sans-serif; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 8px 10px; border-bottom: 1px solid #ddd; text-align: left; }
+      .pass { color: #147a3d; }
+      .fail { color: #b42318; }
+      iframe { position: fixed; width: 1280px; height: 900px; left: 0; top: 0; opacity: 0; pointer-events: none; z-index: -1; }
+    </style>
+  </head>
+  <body>
+    <h1>回归测试</h1>
+    <p id="summary">正在运行…</p>
+    <table>
+      <thead><tr><th>Fixture</th><th>结果</th><th>失败断言</th></tr></thead>
+      <tbody id="results"></tbody>
+    </table>
+    <iframe id="fixture" title="fixture runner"></iframe>
+
+    <script>
+      const cases = [
+        { file: "cache-replay.html", allTrue: ["pageRestored", "langPairRestored", "cachedTextVisible", "navRestored", "navIconPreserved", "cacheCompletionReported", "legacyPageIndexMigrated", "missingUiFilled", "onlyMissingUiRequested"] },
+        { file: "cancel.html", expect: { completed: "true", aborted: "true", allTranslated: "false" } },
+        { file: "dynamic-content-page.html", expect: { segmentCount: "3", navAnchorCount: "0", sideAnchorCount: "1", shadowAnchorCount: "1", translationIsInPlace: "true", staleEnglishRemoved: "true" } },
+        { file: "error-recovery.html", expect: { completed: "true", failedSegments: "1", doomedRecovered: "true", doomedStillMarkedFailed: "false" } },
+        { file: "hero-inline-slogan.html", allTrue: ["sloganCollected", "sloganSingleSource", "inlineStructurePreserved", "sloganTranslatedInPlace", "aggregateContainerUntouched"] },
+        { file: "incremental-content.html", expect: { newTranslations: "3", textOnlyUpdateTranslated: "true", incrementalReported: "true", preparationUpdateTranslated: "true" } },
+        { file: "language-guard.html", expect: { englishTranslated: "true", shortEnglishTranslated: "true", misdetectedEnglishTranslated: "true", misdetectedMenuTranslated: "true", misdetectedNameTranslated: "true", misdetectedCardTitleTranslated: "true", chineseTranslated: "true", thirdLanguageTranslated: "true", localLanguageTranslated: "true", dynamicChineseTranslated: "true", dynamicEnglishTranslated: "true", allCollectedSent: "true" } },
+        { file: "layout-preservation.html", allTrue: ["requiredCoverage", "inPlaceTarget", "sameNode", "sameParent", "sameIndex", "sameTag", "sameClass", "sameDisplay", "sameWidth", "sameLeft", "sameFont", "translationTextComplete", "nestedTypographyPreserved", "tableColumnsUnchanged", "originalNodeRestored", "originalMarkupRestored", "translationModeRestored", "restoredWithoutTargets"] },
+        { file: "legacy-page.html", expect: { segmentCount: "24", translationCount: "24", restoredTranslationCount: "0", restoredLegacyWrapperCount: "0" } },
+        { file: "long-segment.html", expect: { longTextComplete: "true", chunkCount: "3" }, validate: (data) => Number(data.maximumChunk) <= 1800 ? [] : ["maximumChunk<=1800"] },
+        { file: "mixed-language-page.html", expect: { segmentCount: "2", anchorCount: "2" } },
+        { file: "performance-page.html", expect: { segmentCount: "600", preparedScanReused: "true", mainThreadYielded: "true", progressThrottled: "true", styleChurnIgnored: "true", globalMutationIgnored: "true" } },
+        { file: "recollect-translated.html", allTrue: ["idStable", "originalTextStable"] },
+        { file: "rich-text-preservation.html", allTrue: ["translationNodesPreserved", "translationInteractionPreserved", "translationHrefPreserved", "translationFormattingPreserved", "codePreserved", "markerFallbackPreserved", "bilingualRichClone", "noDuplicateIds", "originalMarkupRestored", "originalNodesRestored", "originalInteractionRestored"] },
+        { file: "semantic-page.html", expect: { segmentCount: "4", anchorCount: "4", translationCount: "4", inPlaceTranslationCount: "4", originalModeTargetCount: "0", bilingualVisibleOriginalCount: "4", bilingualVisibleTranslationCount: "4", restoredTranslationCount: "0", restoredHiddenCount: "0" } },
+        { file: "shell-class-reveal.html", allTrue: ["shellRevealTranslated"] },
+        { file: "social-content-units.html", allTrue: ["allPlatformUnitsTranslated", "tweetLinksPreserved"] },
+        { file: "source-language-context.html", allTrue: ["detectedSourceTranslated", "contextSourceTranslated", "nonSourceTranslated", "allSegmentsSent"] },
+        { file: "translation-flow.html", expect: { completed: "true", failedSegments: "0", totalSegments: "4", translationCount: "4", stateTranslated: "true", stateLangPair: "en>zh" }, allTrue: ["cacheTextPersisted", "pageIndexPersisted", "cachePersistedBeforeCompletion"] },
+        { file: "ui-chrome-labels.html", allTrue: ["aboutCollected", "resourcesCollected", "pageControlsCollected", "navProseExcluded", "labelsTranslated", "pageControlsTranslated", "iconsPreserved", "checkboxPreserved", "hrefPreserved", "interactionPreserved"] },
+        { file: "viewport-translation.html", allTrue: ["observerStartedEarly", "belowFoldTranslated", "residualUsesParentTarget", "residualTranslated", "settledCompletionReported", "preloadMarginExpanded"] },
+        { file: "youtube-virtual-feed.html", allTrue: ["feedStructurePreserved", "aggregateContainersUntouched", "allTitlesTranslated", "playableMetadataPreserved", "newYoutubeUnitsTranslated", "recycledTitleRetranslated"] }
+      ];
+
+      const frame = document.querySelector("#fixture");
+      const results = document.querySelector("#results");
+
+      function expectedKeys(testCase) {
+        return [
+          ...Object.keys(testCase.expect || {}),
+          ...(testCase.allTrue || [])
+        ];
+      }
+
+      async function runCase(testCase) {
+        await new Promise((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error("页面加载超时")), 6000);
+          frame.onload = () => {
+            clearTimeout(timer);
+            resolve();
+          };
+          frame.src = `${testCase.file}?run=${Date.now()}`;
+        });
+
+        const deadline = Date.now() + 6500;
+        let data = {};
+        while (Date.now() < deadline) {
+          data = { ...frame.contentDocument.body.dataset };
+          if (
+            data.testComplete === "true" ||
+            expectedKeys(testCase).every((key) => key in data)
+          ) {
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+
+        const failures = [];
+        for (const [key, expected] of Object.entries(testCase.expect || {})) {
+          if (data[key] !== expected) failures.push(`${key}: ${data[key]} ≠ ${expected}`);
+        }
+        for (const key of testCase.allTrue || []) {
+          if (data[key] !== "true") failures.push(`${key}: ${data[key]} ≠ true`);
+        }
+        failures.push(...(testCase.validate?.(data) || []));
+        frame.src = "about:blank";
+        return failures;
+      }
+
+      (async () => {
+        let passed = 0;
+        for (const testCase of cases) {
+          let failures;
+          try {
+            failures = await runCase(testCase);
+          } catch (error) {
+            failures = [error.message];
+          }
+          const ok = failures.length === 0;
+          if (ok) passed += 1;
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${testCase.file}</td><td class="${ok ? "pass" : "fail"}">${ok ? "通过" : "失败"}</td><td>${failures.join("；")}</td>`;
+          results.append(row);
+        }
+        const summary = document.querySelector("#summary");
+        summary.textContent = `${passed}/${cases.length} 通过`;
+        summary.className = passed === cases.length ? "pass" : "fail";
+        document.body.dataset.passed = String(passed);
+        document.body.dataset.total = String(cases.length);
+        document.body.dataset.testComplete = "true";
+      })();
+    </script>
+  </body>
+</html>

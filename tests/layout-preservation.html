@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Layout preservation fixture</title>
+    <style>
+      body { margin: 0; }
+      .book-shell {
+        width: 960px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        gap: 48px;
+      }
+      .chapter-copy {
+        grid-column: 2;
+        width: 620px;
+        margin: 24px 0;
+        font: 28px/1.55 Georgia, serif;
+        text-align: left;
+        color: rgb(34, 34, 34);
+      }
+      .chapter-copy > strong { color: rgb(45, 145, 210); }
+      .video-card { font-size: 13px; }
+      .video-card .video-title {
+        font-size: 26px;
+        font-weight: 700;
+        line-height: 1.3;
+      }
+      table { width: 100%; table-layout: fixed; }
+    </style>
+    <script>
+      globalThis.chrome = {
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage() {
+            return Promise.resolve();
+          }
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <main class="book-shell">
+      <p id="chapter" class="chapter-copy" style="max-width: 620px">
+        <strong>Build</strong> your idea with the tools you already know and keep the original reading layout.
+      </p>
+      <dl>
+        <dt>Audience</dt>
+        <dd>Independent makers who want a practical path.</dd>
+      </dl>
+      <details open>
+        <summary>More context about this chapter</summary>
+        <p>This supporting paragraph must also be translated.</p>
+      </details>
+      <h3 id="video-card" class="video-card">
+        <a href="#video"><span class="video-title">A YouTube-style nested video title</span></a>
+      </h3>
+      <ul>
+        <li id="nested-copy">
+          <h2>Idea</h2>
+          Get an <a href="#idea">idea</a> from problems in your own life. This direct list text must not be missed.
+        </li>
+      </ul>
+      <table>
+        <caption>A table caption that must be translated</caption>
+        <tr><td id="cell">A table cell stays in the same column.</td><td>Second column</td></tr>
+      </table>
+    </main>
+
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        const chapter = document.querySelector("#chapter");
+        const originalParent = chapter.parentElement;
+        const originalIndex = Array.from(originalParent.children).indexOf(chapter);
+        const originalInnerHTML = chapter.innerHTML;
+        const originalStrong = chapter.querySelector("strong");
+        const originalRect = chapter.getBoundingClientRect();
+        const originalStyle = getComputedStyle(chapter);
+        const originalColumns = document.querySelector("tr").children.length;
+        const videoCard = document.querySelector("#video-card");
+        const originalVideoTitle = videoCard.querySelector(".video-title");
+        const originalVideoFontSize = getComputedStyle(originalVideoTitle).fontSize;
+        const originalVideoInlineFontSize = videoCard.style.fontSize;
+
+        globalThis.__contentMessageListener(
+          { type: "collect-segments" },
+          null,
+          (result) => {
+            const required = ["#chapter", "dt", "dd", "summary", "caption", "#cell"];
+            document.body.dataset.requiredCoverage = String(
+              required.every((selector) =>
+                document.querySelector(selector).hasAttribute("data-local-translator-source")
+              )
+            );
+            document.body.dataset.nestedResidualCoverage = String(
+              document.querySelector("#nested-copy h2").hasAttribute("data-local-translator-source") &&
+              Boolean(
+                document.querySelector(
+                  "#nested-copy > [data-local-translator-residual-source][data-local-translator-source]"
+                )
+              )
+            );
+
+            const id = chapter.getAttribute("data-local-translator-source");
+            globalThis.__contentMessageListener(
+              {
+                type: "insert-translation",
+                id,
+                text: "使用你已经熟悉的工具构建想法，并保持原始阅读布局。"
+              },
+              null,
+              () => {}
+            );
+
+            const translatedRect = chapter.getBoundingClientRect();
+            const translatedStyle = getComputedStyle(chapter);
+            document.body.dataset.sameNode = String(chapter === document.querySelector("#chapter"));
+            document.body.dataset.sameParent = String(chapter.parentElement === originalParent);
+            document.body.dataset.sameIndex = String(
+              Array.from(originalParent.children).indexOf(chapter) === originalIndex
+            );
+            document.body.dataset.sameTag = String(chapter.tagName === "P");
+            document.body.dataset.sameClass = String(chapter.className === "chapter-copy");
+            document.body.dataset.sameLeft = String(translatedRect.left === originalRect.left);
+            document.body.dataset.sameWidth = String(translatedRect.width === originalRect.width);
+            document.body.dataset.sameDisplay = String(translatedStyle.display === originalStyle.display);
+            document.body.dataset.sameFont = String(translatedStyle.font === originalStyle.font);
+            document.body.dataset.inPlaceTarget = String(
+              chapter.getAttribute("data-local-translator-target") === id
+            );
+            document.body.dataset.translationTextComplete = String(
+              chapter.textContent === "使用你已经熟悉的工具构建想法，并保持原始阅读布局。"
+            );
+
+            const videoId = videoCard.getAttribute("data-local-translator-source");
+            globalThis.__contentMessageListener(
+              { type: "insert-translation", id: videoId, text: "嵌套的视频标题译文" },
+              null,
+              () => {}
+            );
+            document.body.dataset.nestedTypographyPreserved = String(
+              getComputedStyle(videoCard).fontSize === originalVideoFontSize
+            );
+
+            globalThis.__contentMessageListener(
+              { type: "set-display-mode", mode: "original" },
+              null,
+              () => {}
+            );
+            document.body.dataset.originalMarkupRestored = String(
+              chapter.innerHTML === originalInnerHTML
+            );
+            document.body.dataset.originalNodeRestored = String(
+              chapter.querySelector("strong") === originalStrong
+            );
+            document.body.dataset.videoOriginalNodeRestored = String(
+              videoCard.querySelector(".video-title") === originalVideoTitle
+            );
+            document.body.dataset.videoInlineStyleRestored = String(
+              videoCard.style.fontSize === originalVideoInlineFontSize
+            );
+
+            const cell = document.querySelector("#cell");
+            const cellId = cell.getAttribute("data-local-translator-source");
+            globalThis.__contentMessageListener(
+              { type: "insert-translation", id: cellId, text: "表格单元格仍在同一列。" },
+              null,
+              () => {}
+            );
+            globalThis.__contentMessageListener(
+              { type: "set-display-mode", mode: "bilingual" },
+              null,
+              () => {}
+            );
+            document.body.dataset.tableColumnsUnchanged = String(
+              document.querySelector("tr").children.length === originalColumns
+            );
+            document.body.dataset.bilingualCloneVisible = String(
+              Boolean(
+                chapter.nextElementSibling?.getAttribute(
+                  "data-local-translator-target"
+                )
+              )
+            );
+            globalThis.__contentMessageListener(
+              { type: "set-display-mode", mode: "translation" },
+              null,
+              () => {}
+            );
+            document.body.dataset.translationModeRestored = String(
+              chapter.hasAttribute("data-local-translator-target") &&
+              chapter.nextElementSibling?.getAttribute(
+                "data-local-translator-target"
+              ) !== chapter.getAttribute("data-local-translator-source")
+            );
+
+            globalThis.__contentMessageListener(
+              { type: "restore-original" },
+              null,
+              () => {}
+            );
+            document.body.dataset.restoredWithoutTargets = String(
+              document.querySelectorAll("[data-local-translator-target]").length === 0
+            );
+            document.body.dataset.testComplete = "true";
+          }
+        );
+      });
+    </script>
+  </body>
+</html>

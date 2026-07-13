@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Long segment fixture</title>
+    <script>
+      globalThis.__translationInputs = [];
+      globalThis.chrome = {
+        i18n: {
+          async detectLanguage() {
+            return { languages: [{ language: "en", percentage: 100 }] };
+          }
+        },
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage() {
+            return Promise.resolve();
+          }
+        }
+      };
+      globalThis.Translator = {
+        async availability() {
+          return "available";
+        },
+        async create() {
+          return {
+            async translate(text) {
+              globalThis.__translationInputs.push(text);
+              return text;
+            },
+            destroy() {}
+          };
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <main>
+      <p id="long-copy"></p>
+    </main>
+    <script>
+      document.querySelector("#long-copy").textContent =
+        `${"A complete sentence that must not be omitted. ".repeat(110)}END_SENTINEL.`;
+      globalThis.__expectedLongText = document.querySelector("#long-copy").textContent;
+    </script>
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        globalThis.__contentMessageListener(
+          { type: "start-translation", sourceLanguage: "en", targetLanguage: "zh" },
+          null,
+          () => {}
+        );
+        setTimeout(() => {
+          const paragraph = document.querySelector("#long-copy");
+          document.body.dataset.chunkCount = String(globalThis.__translationInputs.length);
+          document.body.dataset.maximumChunk = String(
+            Math.max(...globalThis.__translationInputs.map((text) => text.length))
+          );
+          document.body.dataset.longTextComplete = String(
+            paragraph.textContent.includes("END_SENTINEL") &&
+            paragraph.textContent.length >= globalThis.__expectedLongText.length
+          );
+          document.body.dataset.testComplete = "true";
+        }, 300);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Translated page re-collection fixture</title>
+    <script>
+      globalThis.chrome = {
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage() {
+            return Promise.resolve();
+          }
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <p id="source">Original paragraph used to verify stable segment ids.</p>
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        globalThis.__contentMessageListener(
+          { type: "collect-segments" },
+          null,
+          (firstResult) => {
+            const id = firstResult.segments[0].id;
+            globalThis.__contentMessageListener(
+              { type: "insert-translation", id, text: "用于验证稳定编号的译文。" },
+              null,
+              () => {}
+            );
+            globalThis.__contentMessageListener(
+              { type: "collect-segments" },
+              null,
+              (secondResult) => {
+                const source = document.querySelector("#source");
+                document.body.dataset.idStable = String(
+                  source.getAttribute("data-local-translator-source") === id &&
+                  source.getAttribute("data-local-translator-target") === id &&
+                  secondResult.segments[0].id === id
+                );
+                document.body.dataset.originalTextStable = String(
+                  secondResult.segments[0].text.includes("Original paragraph")
+                );
+                document.body.dataset.testComplete = "true";
+              }
+            );
+          }
+        );
+      });
+    </script>
+  </body>
+</html>

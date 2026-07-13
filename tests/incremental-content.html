@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Incremental content fixture — 动态内容自动追加翻译</title>
+    <script>
+      globalThis.__sentMessages = [];
+      globalThis.chrome = {
+        i18n: {
+          async detectLanguage() {
+            return { languages: [{ language: "en", percentage: 100 }] };
+          }
+        },
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage(msg) {
+            globalThis.__sentMessages.push(msg);
+            return Promise.resolve();
+          }
+        }
+      };
+      globalThis.Translator = {
+        async availability() {
+          return "available";
+        },
+        async create() {
+          // 留出语言包准备窗口，验证此时插入的信息流内容不会漏译。
+          await new Promise((resolve) => setTimeout(resolve, 120));
+          return {
+            async translate(text) {
+              return `[译] ${text}`;
+            },
+            destroy() {}
+          };
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <main>
+      <article id="feed">
+        <p>Initial paragraph one.</p>
+        <p>Initial paragraph two.</p>
+        <h3 id="text-only-update">x</h3>
+      </article>
+    </main>
+
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        const feed = document.querySelector("#feed");
+        const duringPreparation = document.createElement("p");
+        duringPreparation.textContent =
+          "Feed item inserted while the translator is being prepared.";
+
+        // 模拟真实 popup：先收集并检测语言，再创建 Translator。
+        globalThis.__contentMessageListener(
+          { type: "collect-segments" },
+          null,
+          () => {
+            globalThis.__contentMessageListener(
+              { type: "start-translation", sourceLanguage: "en", targetLanguage: "zh" },
+              null,
+              () => {}
+            );
+            setTimeout(() => feed.append(duringPreparation), 20);
+          }
+        );
+
+        setTimeout(() => {
+          // 初始翻译完成后的译文数
+          const translationsBefore = document.querySelectorAll(
+            "[data-local-translator-target]"
+          ).length;
+          document.body.dataset.translationsBefore = String(translationsBefore);
+          document.body.dataset.preparationUpdateTranslated = String(
+            duringPreparation.hasAttribute("data-local-translator-target")
+          );
+
+          // 2. 模拟初始翻译完成后继续动态加载新内容（无限滚动场景）
+          const newP1 = document.createElement("p");
+          newP1.textContent = "Dynamically loaded paragraph three.";
+          const newP2 = document.createElement("p");
+          newP2.textContent = "Dynamically loaded paragraph four.";
+          feed.append(newP1, newP2);
+          document.querySelector("#text-only-update").firstChild.nodeValue =
+            "Text populated by a characterData-only framework update.";
+
+          // 3. 等 dynamicObserver 防抖（300ms）+ 翻译新段
+          setTimeout(() => {
+            const translationsAfter = document.querySelectorAll(
+              "[data-local-translator-target]"
+            ).length;
+            document.body.dataset.translationsAfter = String(translationsAfter);
+            // 两个新元素 + 一个仅修改 Text 节点的框架更新。
+            document.body.dataset.newTranslations = String(
+              translationsAfter - translationsBefore
+            );
+            document.body.dataset.textOnlyUpdateTranslated = String(
+              document
+                .querySelector("#text-only-update")
+                .hasAttribute("data-local-translator-target")
+            );
+
+            // 验证新段落被标记了 source id（续编，不破坏已有）
+            const newP1Id = newP1.getAttribute("data-local-translator-source");
+            const newP2Id = newP2.getAttribute("data-local-translator-source");
+            document.body.dataset.newP1Id = newP1Id || "";
+            document.body.dataset.newP2Id = newP2Id || "";
+
+            // 验证 incremental progress 消息
+            const incrementalMsg = globalThis.__sentMessages.find(
+              (m) => m.type === "translation-progress" && m.phase === "incremental"
+            );
+            document.body.dataset.incrementalReported = incrementalMsg
+              ? "true"
+              : "false";
+
+            document.body.dataset.testComplete = "true";
+          }, 600);
+        }, 650);
+      });
+    </script>
+  </body>
+</html>

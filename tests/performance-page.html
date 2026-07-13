@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Large dynamic page performance fixture</title>
+    <style>
+      .feed-card { display: block; }
+    </style>
+    <script>
+      globalThis.__sentMessages = [];
+      globalThis.__layoutReadCount = 0;
+      const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+      Element.prototype.getBoundingClientRect = function (...args) {
+        globalThis.__layoutReadCount += 1;
+        return originalGetBoundingClientRect.apply(this, args);
+      };
+      globalThis.chrome = {
+        i18n: {
+          async detectLanguage() {
+            return { languages: [{ language: "en", percentage: 100 }] };
+          }
+        },
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage(message) {
+            globalThis.__sentMessages.push(message);
+            return Promise.resolve();
+          }
+        }
+      };
+      globalThis.Translator = {
+        async availability() {
+          return "available";
+        },
+        async create() {
+          return {
+            async translate(text) {
+              return `[译] ${text}`;
+            },
+            destroy() {}
+          };
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <main id="feed"></main>
+    <script>
+      const feed = document.querySelector("#feed");
+      const fragment = document.createDocumentFragment();
+      for (let index = 0; index < 600; index += 1) {
+        const card = document.createElement("div");
+        card.className = "feed-card";
+        card.textContent = `Video card ${index}: a sufficiently descriptive title for translation.`;
+        fragment.append(card);
+      }
+      feed.append(fragment);
+    </script>
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        setTimeout(() => {
+          document.body.dataset.mainThreadYielded = "true";
+        }, 0);
+
+        // 模拟真实 popup：打开时先 collect 做语言检测，点击后再开始翻译。
+        globalThis.__contentMessageListener(
+          { type: "collect-segments" },
+          null,
+          () => {
+            globalThis.__layoutReadsAfterPreparation =
+              globalThis.__layoutReadCount;
+            globalThis.__contentMessageListener(
+              {
+                type: "start-translation",
+                sourceLanguage: "en",
+                targetLanguage: "zh"
+              },
+              null,
+              () => {}
+            );
+          }
+        );
+
+        const completionPoll = setInterval(() => {
+          const complete = globalThis.__sentMessages.find(
+            (message) => message.type === "translation-complete"
+          );
+          if (!complete) return;
+          clearInterval(completionPoll);
+          const readsAfterTranslation = globalThis.__layoutReadCount;
+          const countBefore = document.querySelectorAll(
+            "[data-local-translator-source]"
+          ).length;
+          document.documentElement.classList.add("frequently-changing-shell-state");
+          const feed = document.querySelector("#feed");
+          let churnStep = 0;
+          const churnTimer = setInterval(() => {
+            churnStep += 1;
+            feed.style.transform = `translateY(${churnStep % 2}px)`;
+            if (churnStep >= 12) clearInterval(churnTimer);
+          }, 20);
+          setTimeout(() => {
+            const countAfter = document.querySelectorAll(
+              "[data-local-translator-source]"
+            ).length;
+            document.body.dataset.segmentCount = String(countAfter);
+            document.body.dataset.globalMutationIgnored = String(
+              countAfter === countBefore
+            );
+            document.body.dataset.preparedScanReused = String(
+              readsAfterTranslation -
+                globalThis.__layoutReadsAfterPreparation <
+                100
+            );
+            document.body.dataset.styleChurnIgnored = String(
+              globalThis.__layoutReadCount - readsAfterTranslation < 20
+            );
+            document.body.dataset.progressThrottled = String(
+              globalThis.__sentMessages.filter(
+                (message) =>
+                  message.type === "translation-progress" &&
+                  message.phase === "translate"
+              ).length <= 55
+            );
+            document.body.dataset.testComplete = "true";
+          }, 700);
+        }, 20);
+      });
+    </script>
+  </body>
+</html>

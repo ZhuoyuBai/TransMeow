@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Translation flow fixture — start-translation 全流程</title>
+    <script>
+      // content.js 下沉后会调用 sendMessage（广播进度）和 Translator API，
+      // 必须在加载 content.js 前 stub。
+      globalThis.__sentMessages = [];
+      globalThis.__storageData = {
+        cacheEnabled: true,
+        sourceLanguage: "auto",
+        targetLanguage: "zh"
+      };
+      globalThis.chrome = {
+        storage: {
+          local: {
+            async get(keys) {
+              const requested = Array.isArray(keys) ? keys : [keys];
+              return Object.fromEntries(
+                requested
+                  .filter((key) => key in globalThis.__storageData)
+                  .map((key) => [key, globalThis.__storageData[key]])
+              );
+            },
+            async set(values) {
+              Object.assign(globalThis.__storageData, values);
+            }
+          }
+        },
+        i18n: {
+          async detectLanguage() {
+            return { languages: [{ language: "en", percentage: 100 }] };
+          }
+        },
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage(msg) {
+            if (msg.type === "translation-complete") {
+              globalThis.__cachePersistedBeforeCompletion = Boolean(
+                globalThis.__storageData.translationPageCache?.[location.href]
+              );
+            }
+            globalThis.__sentMessages.push(msg);
+            return Promise.resolve();
+          }
+        }
+      };
+      // Translator stub：translate 返回模拟译文，模拟本地翻译。
+      globalThis.Translator = {
+        async availability() {
+          return "available";
+        },
+        async create() {
+          return {
+            async translate(text) {
+              return `[译] ${text}`;
+            },
+            destroy() {}
+          };
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>Translation flow test</h1>
+        <p>First paragraph of real content to translate.</p>
+        <p>Second paragraph with more text.</p>
+        <p>Third paragraph to verify the loop completes.</p>
+      </article>
+    </main>
+
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        // 触发后台翻译（content.js 持有 translator 实例异步进行）
+        globalThis.__contentMessageListener(
+          { type: "start-translation", sourceLanguage: "en", targetLanguage: "zh" },
+          null,
+          (resp) => {
+            document.body.dataset.startAcknowledged = String(resp?.ok);
+          }
+        );
+
+        // runTranslation 是 async，等它跑完
+        setTimeout(() => {
+          const sent = globalThis.__sentMessages;
+          const progressMsgs = sent.filter(
+            (m) => m.type === "translation-progress" && m.phase === "translate"
+          );
+          const completeMsg = sent.find((m) => m.type === "translation-complete");
+
+          document.body.dataset.progressCount = String(progressMsgs.length);
+          document.body.dataset.completed = completeMsg ? "true" : "false";
+          document.body.dataset.totalSegments = String(completeMsg?.total || 0);
+          document.body.dataset.failedSegments = String(completeMsg?.failed || 0);
+
+          // 验证译文 span 插入
+          const translations = document.querySelectorAll(
+            "[data-local-translator-target]"
+          );
+          document.body.dataset.translationCount = String(translations.length);
+
+          // 验证第一段译文内容
+          document.body.dataset.firstTranslation =
+            translations[0]?.textContent || "";
+          document.body.dataset.cacheTextPersisted = String(
+            Boolean(
+              globalThis.__storageData.translationCache?.[
+                "en|zh|First paragraph of real content to translate."
+              ]
+            )
+          );
+          const pageRecord =
+            globalThis.__storageData.translationPageCache?.[location.href];
+          document.body.dataset.pageIndexPersisted = String(
+            pageRecord?.sourceLanguage === "en" &&
+              pageRecord?.targetLanguage === "zh"
+          );
+          document.body.dataset.cachePersistedBeforeCompletion = String(
+            globalThis.__cachePersistedBeforeCompletion === true &&
+              completeMsg?.cacheSaved === true
+          );
+
+          // 查询页面状态
+          globalThis.__contentMessageListener(
+            { type: "get-page-state" },
+            null,
+            (state) => {
+              document.body.dataset.stateTranslated = String(state.translated);
+              document.body.dataset.stateLangPair = `${state.sourceLang}>${state.targetLang}`;
+              document.body.dataset.testComplete = "true";
+            }
+          );
+        }, 200);
+      });
+    </script>
+  </body>
+</html>

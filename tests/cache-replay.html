@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Cached page replay fixture</title>
+    <script>
+      const paragraphText = "A previously translated paragraph should replay without a model.";
+      const secondParagraphText =
+        "A second substantial cached paragraph proves this is the same prior page.";
+      const thirdParagraphText =
+        "A third substantial cached paragraph makes legacy cache migration safe.";
+      const storageData = {
+        cacheEnabled: true,
+        sourceLanguage: "auto",
+        targetLanguage: "zh",
+        displayMode: "translation",
+        translationCache: {
+          "en|zh|About": { text: "关于", richNodeTexts: ["关于"] },
+          [`en|zh|${paragraphText}`]: "这是一段从缓存直接恢复的译文。",
+          [`en|zh|${secondParagraphText}`]: "第二段缓存译文。",
+          [`en|zh|${thirdParagraphText}`]: "第三段缓存译文。"
+        }
+      };
+      globalThis.__sentMessages = [];
+      globalThis.__translationInputs = [];
+      globalThis.Translator = {
+        async availability() {
+          return "available";
+        },
+        async create() {
+          return {
+            async translate(text) {
+              globalThis.__translationInputs.push(text);
+              return text === "Resources" ? "资源" : `[不应重译] ${text}`;
+            },
+            destroy() {}
+          };
+        }
+      };
+      globalThis.chrome = {
+        i18n: {
+          async detectLanguage() {
+            return { languages: [{ language: "en", percentage: 100 }] };
+          }
+        },
+        storage: {
+          local: {
+            async get(keys) {
+              const requested = Array.isArray(keys) ? keys : [keys];
+              return Object.fromEntries(
+                requested
+                  .filter((key) => key in storageData)
+                  .map((key) => [key, storageData[key]])
+              );
+            },
+            async set(values) {
+              Object.assign(storageData, values);
+            }
+          }
+        },
+        runtime: {
+          onMessage: {
+            addListener(listener) {
+              globalThis.__contentMessageListener = listener;
+            }
+          },
+          sendMessage(message) {
+            globalThis.__sentMessages.push(message);
+            return Promise.resolve();
+          }
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a id="about" href="/about">About<svg aria-hidden="true"><path /></svg></a>
+        <button id="resources" type="button">Resources</button>
+      </nav>
+    </header>
+    <main>
+      <p id="content"></p>
+      <p id="second-content"></p>
+      <p id="third-content"></p>
+    </main>
+    <script>
+      document.querySelector("#content").textContent = paragraphText;
+      document.querySelector("#second-content").textContent = secondParagraphText;
+      document.querySelector("#third-content").textContent = thirdParagraphText;
+    </script>
+    <script src="../content.js"></script>
+    <script>
+      addEventListener("load", () => {
+        globalThis.__contentMessageListener(
+          { type: "get-page-state" },
+          null,
+          (state) => {
+            document.body.dataset.pageRestored = String(state.translated);
+            document.body.dataset.langPairRestored = String(
+              state.sourceLang === "en" && state.targetLang === "zh"
+            );
+            document.body.dataset.cachedTextVisible = String(
+              document.querySelector("#content").innerText.trim() ===
+                "这是一段从缓存直接恢复的译文。"
+            );
+            document.body.dataset.navRestored = String(
+              document.querySelector("#about").innerText.trim() === "关于"
+            );
+            document.body.dataset.navIconPreserved = String(
+              Boolean(document.querySelector("#about svg"))
+            );
+            document.body.dataset.cacheCompletionReported = String(
+              globalThis.__sentMessages.some(
+                (message) =>
+                  message.type === "translation-complete" && message.cached === true
+              )
+            );
+            const migratedRecord =
+              storageData.translationPageCache?.[location.href];
+            document.body.dataset.legacyPageIndexMigrated = String(
+              migratedRecord?.sourceLanguage === "en" &&
+                migratedRecord?.targetLanguage === "zh"
+            );
+            setTimeout(() => {
+              document.body.dataset.missingUiFilled = String(
+                document.querySelector("#resources").innerText.trim() === "资源"
+              );
+              document.body.dataset.onlyMissingUiRequested = String(
+                globalThis.__translationInputs.length === 1 &&
+                  globalThis.__translationInputs[0] === "Resources"
+              );
+              document.body.dataset.testComplete = "true";
+            }, 200);
+          }
+        );
+      });
+    </script>
+  </body>
+</html>
