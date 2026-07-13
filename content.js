@@ -727,8 +727,57 @@
     preparedPageData = {
       pageLanguage: pageData.pageLanguage,
       title: pageData.title,
+      textFingerprint: getPageTextFingerprint(),
       segments: pageData.segments.map((segment) => ({ ...segment }))
     };
+  }
+
+  function getPageTextFingerprint() {
+    const text = normalizeText(document.body?.innerText || "");
+    let hash = 2166136261;
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return `${text.length}:${hash >>> 0}`;
+  }
+
+  function discardPreparedPageData() {
+    if (!preparedPageData?.segments?.length) {
+      clearPreparedPageData();
+      return;
+    }
+
+    const preparedIds = new Set(
+      preparedPageData.segments.map((segment) => segment.id)
+    );
+    const preparedSources = queryAllRoots(`[${SOURCE_ATTRIBUTE}]`).filter(
+      (source) =>
+        preparedIds.has(source.getAttribute(SOURCE_ATTRIBUTE)) &&
+        !translatedTextBySource.has(source)
+    );
+    const residualWrappers = preparedSources.filter((source) =>
+      source.hasAttribute(RESIDUAL_SOURCE_ATTRIBUTE)
+    );
+
+    isRestoring = true;
+    preparedSources.forEach((source) => {
+      source.removeAttribute(SOURCE_ATTRIBUTE);
+      sourceTextBySource.delete(source);
+    });
+    queryAllRoots(`[${LEGACY_SOURCE_ATTRIBUTE}]`)
+      .filter((node) =>
+        preparedIds.has(node.getAttribute(LEGACY_SOURCE_ATTRIBUTE))
+      )
+      .forEach((node) => node.replaceWith(...node.childNodes));
+    preparedSources
+      .filter((source) => source.hasAttribute(LEGACY_ANCHOR_ATTRIBUTE))
+      .forEach((source) => source.remove());
+    residualWrappers.forEach((wrapper) => {
+      if (wrapper.isConnected) wrapper.replaceWith(...wrapper.childNodes);
+    });
+    clearPreparedPageData();
+    isRestoring = false;
   }
 
   function getReusablePreparedPageData() {
@@ -738,10 +787,18 @@
       return (
         source?.isConnected &&
         source.getAttribute(SOURCE_ATTRIBUTE) === segment.id &&
-        !translatedTextBySource.has(source)
+        !translatedTextBySource.has(source) &&
+        (isLegacySource(source) ||
+          getElementText(source) === normalizeText(segment.text))
       );
     });
-    if (connectedSegments.length === 0) return null;
+    const snapshotIsComplete =
+      connectedSegments.length === preparedPageData.segments.length &&
+      preparedPageData.textFingerprint === getPageTextFingerprint();
+    if (!snapshotIsComplete) {
+      discardPreparedPageData();
+      return null;
+    }
     return {
       ...preparedPageData,
       segments: connectedSegments.map((segment) => ({ ...segment }))
@@ -1874,7 +1931,13 @@
     if (DISPLAY_MODES.has(stored.displayMode)) {
       setDisplayMode(stored.displayMode);
     }
-    const pageData = await collectSegments();
+    let pageData = await collectSegments();
+    if (location.href !== pageUrl || translationState !== "idle") return false;
+    // collectSegments 会在大页面扫描时主动让出主线程。若框架恰好在这些
+    // 间隙完成 hydration，第一次结果可能已经过期；复用校验会在稳定时
+    // 直接返回同一快照，失效时则清理旧标记并重新收集。
+    const reconciledPageData = getReusablePreparedPageData();
+    pageData = reconciledPageData || (await collectSegments());
     if (location.href !== pageUrl || translationState !== "idle") return false;
 
     let restored = 0;
@@ -1904,11 +1967,10 @@
     }
     if (restored === 0 || location.href !== pageUrl) return false;
 
+    const total = pageData.segments?.length || restored;
     translatorSourceLang = pageRecord.sourceLanguage;
     translatorTargetLang = pageRecord.targetLanguage;
     translatedPageUrl = pageUrl;
-    currentProgress = 100;
-    translationState = "ready";
     preparedPageData = null;
 
     if (pageRecord.migrated) {
@@ -1920,26 +1982,68 @@
       await saveTranslationCache().catch(() => {});
     }
 
+    if (missingSegments.length === 0) {
+      currentProgress = 100;
+      translationState = "ready";
+      reportToPopup({
+        type: "translation-complete",
+        total,
+        translated: restored,
+        failed: 0,
+        cached: true
+      });
+      return true;
+    }
+
+    // URL 相同不代表动态首页内容相同。缓存只命中一部分时，这只是翻译进度，
+    // 不能提前把页面标成 100% 完成；否则用户会看到中英混排却收到完成状态。
+    currentProgress = Math.round((restored / total) * 100);
+    currentScope = "all";
+    translationState = "translating";
+    startDynamicObserver();
     reportToPopup({
-      type: "translation-complete",
-      total: restored,
+      type: "translation-progress",
+      phase: "translate",
+      done: restored,
+      total,
       translated: restored,
       failed: 0,
       cached: true
     });
-    if (missingSegments.length > 0) {
-      setTimeout(() => {
-        fillHydratedCacheMisses(pageUrl, pageRecord, missingSegments);
-      }, 0);
-    }
+    setTimeout(() => {
+      fillHydratedCacheMisses(
+        pageUrl,
+        pageRecord,
+        missingSegments,
+        restored,
+        total
+      );
+    }, 0);
     return true;
   }
 
-  async function fillHydratedCacheMisses(pageUrl, pageRecord, segments) {
+  async function fillHydratedCacheMisses(
+    pageUrl,
+    pageRecord,
+    segments,
+    restored,
+    total
+  ) {
     await yieldToMainThread();
-    if (location.href !== pageUrl || translationState !== "ready") return;
+    if (
+      location.href !== pageUrl ||
+      translationState !== "translating" ||
+      abortRequested
+    ) {
+      return;
+    }
 
     abortRequested = false;
+    let translated = 0;
+    let failed = 0;
+    let skipped = 0;
+    let processed = 0;
+    let lastReportedProgress = currentProgress;
     try {
       await ensureTranslator(
         pageRecord.sourceLanguage,
@@ -1947,32 +2051,70 @@
       );
       if (location.href !== pageUrl || abortRequested) return;
       translationState = "translating";
-      let translated = 0;
       for (const segment of segments) {
         if (location.href !== pageUrl || abortRequested) break;
-        if (await translateSegment(segment.id, segment.text)) translated += 1;
+        try {
+          if (await translateSegment(segment.id, segment.text)) {
+            translated += 1;
+          } else {
+            skipped += 1;
+          }
+        } catch {
+          failed += 1;
+          failedSegments.add(segment.id);
+          const source = queryRoot(
+            `[${SOURCE_ATTRIBUTE}="${segment.id}"]`
+          );
+          source?.setAttribute("data-local-translator-failed", "true");
+        }
+        processed += 1;
+        currentProgress = Math.round(((restored + processed) / total) * 100);
+        if (
+          processed === segments.length ||
+          currentProgress >= lastReportedProgress + 2
+        ) {
+          lastReportedProgress = currentProgress;
+          reportToPopup({
+            type: "translation-progress",
+            phase: "translate",
+            done: restored + processed,
+            total,
+            translated: restored + translated,
+            skipped,
+            failed,
+            cached: true
+          });
+        }
       }
-      if (translated > 0) {
-        rememberCachedPage(
-          pageUrl,
-          pageRecord.sourceLanguage,
-          pageRecord.targetLanguage
-        );
-        await saveTranslationCache();
-        reportToPopup({
-          type: "translation-complete",
-          total: translated,
-          translated,
-          failed: 0,
-          incremental: true,
-          cachedReplayFill: true,
-          cacheSaved: true
-        });
-      }
+      if (location.href !== pageUrl || abortRequested) return;
+      rememberCachedPage(
+        pageUrl,
+        pageRecord.sourceLanguage,
+        pageRecord.targetLanguage
+      );
+      await saveTranslationCache();
     } catch {
-      // 已命中的缓存仍保持可见；补翻失败不撤销当前页面，用户稍后可重试。
+      failed += Math.max(0, segments.length - processed);
+      for (const segment of segments.slice(processed)) {
+        failedSegments.add(segment.id);
+        const source = queryRoot(`[${SOURCE_ATTRIBUTE}="${segment.id}"]`);
+        source?.setAttribute("data-local-translator-failed", "true");
+      }
     } finally {
-      if (location.href === pageUrl) translationState = "ready";
+      if (location.href !== pageUrl || abortRequested) return;
+      currentProgress = 100;
+      translationState = "ready";
+      reportToPopup({
+        type: "translation-complete",
+        total,
+        translated: restored + translated,
+        skipped,
+        failed,
+        cached: true,
+        cachedReplayFill: true,
+        cacheSaved: !cacheDirty && !pageCacheDirty
+      });
+      drainViewportTranslationQueue();
     }
   }
 

@@ -534,6 +534,9 @@ async function handlePrimaryAction() {
   if (isWorking || isPageUnsupported) return;
   isWorking = true;
   translateButton.disabled = true;
+  if (!pageIsTranslated) {
+    translateButton.textContent = i18n.t("translating");
+  }
 
   try {
     if (pageIsTranslated) {
@@ -549,6 +552,7 @@ async function handlePrimaryAction() {
     setStatus(error?.message || i18n.t("translationFailed"), "error");
     isWorking = false;
     translateButton.disabled = false;
+    setTranslatedState(pageIsTranslated);
   }
 }
 
@@ -602,6 +606,7 @@ async function initialize() {
       // content.js 正在后台翻译，同步工作状态，跳过预检测避免干扰。
       isWorking = true;
       translateButton.disabled = true;
+      translateButton.textContent = i18n.t("translating");
       setStatus(i18n.t("translatingProgress"), "busy");
       setProgress(state.progress || 0, i18n.t("translating"));
     } else if (state?.translated) {
@@ -746,6 +751,7 @@ chrome.runtime.onMessage.addListener((message, sender) => {
   } else if (message.type === "translation-error") {
     isWorking = false;
     translateButton.disabled = false;
+    setTranslatedState(pageIsTranslated);
     setStatus(message.message || i18n.t("translationFailed"), "error");
     setProgress(0, i18n.t("translationFailed"), false);
   }

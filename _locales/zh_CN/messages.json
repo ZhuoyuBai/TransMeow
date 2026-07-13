@@ -2,5 +2,9 @@
   "appName": {
     "message": "翻译喵",
     "description": "扩展名称"
+  },
+  "appDescription": {
+    "message": "免费，快速的本地翻译插件",
+    "description": "扩展描述"
   }
 }

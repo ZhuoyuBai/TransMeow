@@ -2,5 +2,9 @@
   "appName": {
     "message": "TransMeow",
     "description": "Extension name"
+  },
+  "appDescription": {
+    "message": "A free, fast, local translation extension.",
+    "description": "Extension description"
   }
 }

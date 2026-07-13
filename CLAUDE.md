@@ -26,7 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # 在项目根目录启动，以便 fixture 能通过 ../content.js 加载源码
 python3 -m http.server 8000
 # 然后在浏览器中打开 http://127.0.0.1:8000/tests/run-all.html
-# 发布门槛：22/22 通过
+# 发布门槛：23/23 通过
 ```
 
 也可以单独打开任一 fixture 调试具体场景。
@@ -45,6 +45,8 @@ python3 -m http.server 8000
 
 `ui-chrome-labels.html` 覆盖导航栏原子链接/按钮翻译且不破坏图标和交互；
 `cache-replay.html` 覆盖页面重新加载后直接回放译文且不创建 Translator；
+部分缓存命中必须保持翻译中状态，补齐缺口后才能报告完成；
+`prepared-snapshot-reconciliation.html` 覆盖预扫描后框架替换/新增 DOM 时重新对账；
 `hero-inline-slogan.html` 覆盖由 span/br/em/sup 拼接的 Hero 标语整句翻译并保留排版。
 
 ## 代码架构

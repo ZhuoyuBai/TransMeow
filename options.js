@@ -26,12 +26,6 @@ const alwaysTranslateSitesList = document.querySelector(
 const alwaysTranslateSitesEmpty = document.querySelector(
   "#always-translate-sites-empty"
 );
-const alwaysTranslateSitesCount = document.querySelector(
-  "#always-translate-sites-count"
-);
-const siteRulesActionStatus = document.querySelector(
-  "#site-rules-action-status"
-);
 const theme = globalThis.LocalTranslatorTheme;
 const themeOptions = Array.from(document.querySelectorAll(".theme-option"));
 const panels = {
@@ -71,17 +65,14 @@ function getLanguageName(language) {
 
 function createRow(language) {
   const name = getLanguageName(language);
+  const nativeName = languageCatalog.nativeNames[language] || name;
   const row = modelRowTemplate.content.firstElementChild.cloneNode(true);
   row.dataset.language = language;
-  row.dataset.search = `${name} ${language} en-${language}`.toLowerCase();
-  row.querySelector(".language-symbol").textContent = language.replace(
-    "zh-Hant",
-    "繁"
-  );
+  row.dataset.search =
+    `${name} ${nativeName} ${language} en-${language}`.toLowerCase();
   row.querySelector(".language-name").textContent = name;
-  row.querySelector(".language-pair").textContent = i18n.t("languageCode", {
-    language
-  });
+  row.querySelector(".language-code").textContent = language;
+  row.querySelector(".language-native-name").textContent = nativeName;
   row.querySelector(".row-action").addEventListener("click", () =>
     handleRowAction(language)
   );
@@ -233,11 +224,12 @@ function refreshLocalizedRows() {
   if (autoOption) autoOption.textContent = i18n.t("followBrowser");
   for (const [language, row] of rowsByLanguage) {
     const name = getLanguageName(language);
-    row.dataset.search = `${name} ${language} en-${language}`.toLowerCase();
+    const nativeName = languageCatalog.nativeNames[language] || name;
+    row.dataset.search =
+      `${name} ${nativeName} ${language} en-${language}`.toLowerCase();
     row.querySelector(".language-name").textContent = name;
-    row.querySelector(".language-pair").textContent = i18n.t("languageCode", {
-      language
-    });
+    row.querySelector(".language-code").textContent = language;
+    row.querySelector(".language-native-name").textContent = nativeName;
     setRowState(
       language,
       row.dataset.state || "checking",
@@ -263,9 +255,6 @@ function renderAlwaysTranslateSites(sites) {
   const normalizedSites = normalizeSites(sites);
   alwaysTranslateSitesList.replaceChildren();
   alwaysTranslateSitesEmpty.hidden = normalizedSites.length > 0;
-  alwaysTranslateSitesCount.textContent = i18n.t("siteCount", {
-    count: normalizedSites.length
-  });
 
   for (const site of normalizedSites) {
     const row = document.createElement("div");
@@ -315,7 +304,6 @@ async function removeAlwaysTranslateSite(site) {
     (storedSite) => storedSite !== site
   );
   await chrome.storage.local.set({ alwaysTranslateSites: nextSites });
-  siteRulesActionStatus.textContent = i18n.t("siteRemoved", { site });
 }
 
 searchInput.addEventListener("input", filterRows);

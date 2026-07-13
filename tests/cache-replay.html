@@ -31,6 +31,7 @@
           return {
             async translate(text) {
               globalThis.__translationInputs.push(text);
+              await new Promise((resolve) => setTimeout(resolve, 80));
               return text === "Resources" ? "资源" : `[不应重译] ${text}`;
             },
             destroy() {}
@@ -97,6 +98,9 @@
           null,
           (state) => {
             document.body.dataset.pageRestored = String(state.translated);
+            document.body.dataset.partialReplayStillWorking = String(
+              state.translating && state.progress > 0 && state.progress < 100
+            );
             document.body.dataset.langPairRestored = String(
               state.sourceLang === "en" && state.targetLang === "zh"
             );
@@ -110,10 +114,10 @@
             document.body.dataset.navIconPreserved = String(
               Boolean(document.querySelector("#about svg"))
             );
-            document.body.dataset.cacheCompletionReported = String(
-              globalThis.__sentMessages.some(
+            document.body.dataset.noEarlyCacheCompletion = String(
+              !globalThis.__sentMessages.some(
                 (message) =>
-                  message.type === "translation-complete" && message.cached === true
+                  message.type === "translation-complete"
               )
             );
             const migratedRecord =
@@ -129,6 +133,15 @@
               document.body.dataset.onlyMissingUiRequested = String(
                 globalThis.__translationInputs.length === 1 &&
                   globalThis.__translationInputs[0] === "Resources"
+              );
+              const completionMessages = globalThis.__sentMessages.filter(
+                (message) => message.type === "translation-complete"
+              );
+              document.body.dataset.singleSettledCompletion = String(
+                completionMessages.length === 1 &&
+                  completionMessages[0].cachedReplayFill === true &&
+                  completionMessages[0].translated ===
+                    completionMessages[0].total
               );
               document.body.dataset.testComplete = "true";
             }, 200);

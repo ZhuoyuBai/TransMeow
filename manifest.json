@@ -2,10 +2,10 @@
   "manifest_version": 3,
   "name": "__MSG_appName__",
   "default_locale": "en",
-  "description": "使用 Chrome 内置翻译能力，在网页中切换仅译文、原文和双语对照。",
+  "description": "__MSG_appDescription__",
   "version": "0.2.0",
   "minimum_chrome_version": "138",
-  "permissions": ["activeTab", "scripting", "storage"],
+  "permissions": ["scripting", "storage"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "content_scripts": [
     {
