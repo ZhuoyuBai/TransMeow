@@ -251,6 +251,10 @@ function normalizeSites(sites) {
   ).sort((left, right) => left.localeCompare(right));
 }
 
+function getSiteOrigins(hostname) {
+  return [`http://${hostname}/*`, `https://${hostname}/*`];
+}
+
 function renderAlwaysTranslateSites(sites) {
   const normalizedSites = normalizeSites(sites);
   alwaysTranslateSitesList.replaceChildren();
@@ -304,6 +308,9 @@ async function removeAlwaysTranslateSite(site) {
     (storedSite) => storedSite !== site
   );
   await chrome.storage.local.set({ alwaysTranslateSites: nextSites });
+  await chrome.permissions.remove({
+    origins: getSiteOrigins(site)
+  }).catch(() => false);
 }
 
 searchInput.addEventListener("input", filterRows);

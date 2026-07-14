@@ -44,6 +44,10 @@ function normalizeLanguage(language) {
   return languageCatalog.normalize(language);
 }
 
+function getSiteOrigins(hostname) {
+  return [`http://${hostname}/*`, `https://${hostname}/*`];
+}
+
 function populateLanguageSelectors() {
   for (const { code: language } of SUPPORTED_LANGUAGES) {
     const displayName = getLanguageNameWithNativeName(language);
@@ -757,11 +761,32 @@ alwaysTranslateSiteInput.addEventListener("change", async () => {
   if (!activeHostname) return;
 
   if (alwaysTranslateSiteInput.checked) {
-    const stored = await chrome.storage.local.get("alwaysTranslateSites");
-    const sites = new Set(stored.alwaysTranslateSites || []);
-    sites.add(activeHostname);
-    await chrome.storage.local.set({ alwaysTranslateSites: Array.from(sites) });
-    if (!pageIsTranslated && !isWorking) await handlePrimaryAction();
+    // permissions.request 必须直接发生在用户手势中；先发起请求，再等待结果。
+    const permissionRequest = chrome.permissions.request({
+      origins: getSiteOrigins(activeHostname)
+    });
+    alwaysTranslateSiteInput.disabled = true;
+
+    try {
+      const granted = await permissionRequest;
+      if (!granted) {
+        alwaysTranslateSiteInput.checked = false;
+        setStatus(i18n.t("sitePermissionDenied"), "error");
+        return;
+      }
+
+      const stored = await chrome.storage.local.get("alwaysTranslateSites");
+      const sites = new Set(stored.alwaysTranslateSites || []);
+      sites.add(activeHostname);
+      await chrome.storage.local.set({ alwaysTranslateSites: Array.from(sites) });
+      setStatus(i18n.t("siteEnabled"));
+      if (!pageIsTranslated && !isWorking) await handlePrimaryAction();
+    } catch {
+      alwaysTranslateSiteInput.checked = false;
+      setStatus(i18n.t("sitePermissionDenied"), "error");
+    } finally {
+      alwaysTranslateSiteInput.disabled = false;
+    }
     return;
   }
 
@@ -769,7 +794,10 @@ alwaysTranslateSiteInput.addEventListener("change", async () => {
   const sites = new Set(stored.alwaysTranslateSites || []);
   sites.delete(activeHostname);
   await chrome.storage.local.set({ alwaysTranslateSites: Array.from(sites) });
-  setStatus("");
+  await chrome.permissions.remove({
+    origins: getSiteOrigins(activeHostname)
+  }).catch(() => false);
+  setStatus(i18n.t("siteDisabled"));
 });
 
 translateButton.addEventListener("click", handlePrimaryAction);

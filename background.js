@@ -168,9 +168,9 @@ ensureIcons();
 async function autoTranslateTab(tabId, url) {
   if (!tabId || !/^https?:/.test(url || "")) return;
 
-  let hostname;
+  let pageUrl;
   try {
-    hostname = new URL(url).hostname;
+    pageUrl = new URL(url);
   } catch {
     return;
   }
@@ -178,12 +178,22 @@ async function autoTranslateTab(tabId, url) {
   const { alwaysTranslateSites = [] } = await chrome.storage.local.get(
     "alwaysTranslateSites"
   );
-  if (!alwaysTranslateSites.includes(hostname)) return;
+  if (!alwaysTranslateSites.includes(pageUrl.hostname)) return;
+
+  const originPattern = `${pageUrl.protocol}//${pageUrl.hostname}/*`;
+  const permitted = await chrome.permissions.contains({
+    origins: [originPattern]
+  });
+  if (!permitted) return;
 
   try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["languages.js", "content.js"]
+    });
     await chrome.tabs.sendMessage(tabId, { type: "auto-translate-if-enabled" });
   } catch {
-    // 内容脚本可能尚未完成初始化，页面内的启动调度仍会自动检查站点规则。
+    // 标签页可能在注入期间再次导航；下一次完成事件会重新尝试。
   }
 }
 
