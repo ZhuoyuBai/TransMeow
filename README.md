@@ -6,7 +6,7 @@
 </div>
 
 <p align="center">
-  <img src="docs/images/transmeow-promo.png" width="100%" alt="翻译喵宣传图：免费版的沉浸式翻译">
+  <img src="docs/images/transmeow-promo.webp" width="1200" alt="翻译喵宣传图：免费版的沉浸式翻译">
 </p>
 
 ## 翻译喵是什么
@@ -54,7 +54,7 @@ Chrome 应用商店版本即将上线。上线后，点击安装即可自动接�
 翻译喵直接调用 Chrome 内置的本地翻译能力。语言包下载完成后，可以反复使用，不限制翻译次数和字数，也不需要购买额外算力。
 
 <p align="center">
-  <img src="docs/images/local-free.png" width="100%" alt="翻译喵本地免费翻译">
+  <img src="docs/images/local-free.webp" width="1200" alt="翻译喵本地免费翻译">
 </p>
 
 ### 极速翻译，阅读少一点等待
@@ -62,7 +62,7 @@ Chrome 应用商店版本即将上线。上线后，点击安装即可自动接�
 网页内容在本机处理，无需等待第三方翻译接口往返；翻译缓存还会帮助已访问内容更快呈现。
 
 <p align="center">
-  <img src="docs/images/fast-translation.png" width="100%" alt="翻译喵极速网页翻译">
+  <img src="docs/images/fast-translation.webp" width="1200" alt="翻译喵极速网页翻译">
 </p>
 
 ### 隐私安全，正文不上传云端
@@ -70,7 +70,7 @@ Chrome 应用商店版本即将上线。上线后，点击安装即可自动接�
 网页正文只在你的电脑上处理，不会发送给翻译喵或第三方翻译服务器。语言设置、网站偏好和翻译缓存也保存在本机，并可在高级设置中清理。
 
 <p align="center">
-  <img src="docs/images/privacy-safe.png" width="100%" alt="翻译喵隐私安全：离线本地模型，数据不上云端">
+  <img src="docs/images/privacy-safe.webp" width="1200" alt="翻译喵隐私安全：离线本地模型，数据不上云端">
 </p>
 
 [查看完整隐私政策](PRIVACY.md)
@@ -80,7 +80,7 @@ Chrome 应用商店版本即将上线。上线后，点击安装即可自动接�
 点击 Chrome 右上角的“更多”按钮，依次进入“设置”→“关于 Chrome”，即可查看当前版本号。版本低于 138 时，请先更新 Chrome 再安装翻译喵。
 
 <p align="center">
-  <img src="docs/images/chrome-version-guide.png" width="100%" alt="三步查看 Chrome 版本号">
+  <img src="docs/images/chrome-version-guide.webp" width="1100" alt="三步查看 Chrome 版本号">
 </p>
 
 ## 使用许可
