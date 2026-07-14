@@ -41,11 +41,7 @@ const SUPPORTED_LANGUAGE_CODES = new Set(
 );
 
 function normalizeLanguage(language) {
-  if (!language) return "";
-  const normalized = language.trim();
-  if (/^zh-(TW|HK|Hant)/i.test(normalized)) return "zh-Hant";
-  const baseLanguage = normalized.split("-")[0].toLowerCase();
-  return baseLanguage === "he" ? "iw" : baseLanguage;
+  return languageCatalog.normalize(language);
 }
 
 function populateLanguageSelectors() {
@@ -56,7 +52,7 @@ function populateLanguageSelectors() {
     sourceLanguageSelect.add(sourceOption);
     targetLanguageSelect.add(targetOption);
   }
-  targetLanguageSelect.value = "zh";
+  targetLanguageSelect.value = languageCatalog.getSystemLanguage();
   initializeCustomSelects();
 }
 
@@ -343,7 +339,7 @@ async function getActiveTab() {
 async function ensureContentScript(tabId) {
   await chrome.scripting.executeScript({
     target: { tabId },
-    files: ["content.js"]
+    files: ["languages.js", "content.js"]
   });
 }
 
@@ -565,7 +561,7 @@ async function initialize() {
       "cacheEnabled",
       "alwaysTranslateSites"
     ]);
-    if (stored.targetLanguage) {
+    if (SUPPORTED_LANGUAGE_CODES.has(stored.targetLanguage)) {
       targetLanguageSelect.value = stored.targetLanguage;
     }
     if (stored.sourceLanguage) {

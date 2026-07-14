@@ -16,6 +16,45 @@
   ];
 
   const nativeNames = Object.fromEntries(languages);
+  const supportedCodes = new Set(languages.map(([code]) => code));
+
+  function normalize(language) {
+    if (!language) return "";
+    const value = language.trim();
+    if (/^zh-(TW|HK|MO|Hant)/i.test(value)) return "zh-Hant";
+    if (/^zh/i.test(value)) return "zh";
+
+    const baseLanguage = value.split("-")[0].toLowerCase();
+    if (baseLanguage === "he") return "iw";
+    if (baseLanguage === "nb" || baseLanguage === "nn") return "no";
+    return supportedCodes.has(baseLanguage) ? baseLanguage : "";
+  }
+
+  function getSystemLanguage() {
+    let uiLanguage = "";
+    try {
+      // Chrome 的界面语言最接近扩展可获得的系统显示语言。
+      uiLanguage = globalThis.chrome?.i18n?.getUILanguage?.() || "";
+    } catch {
+      // 普通网页测试环境可能没有完整的 chrome.i18n 实现。
+    }
+    const preferredLanguages = Array.isArray(globalThis.navigator?.languages)
+      ? globalThis.navigator.languages
+      : [];
+    const candidates = [
+      uiLanguage,
+      ...preferredLanguages,
+      globalThis.navigator?.language
+    ];
+
+    for (const candidate of candidates) {
+      const language = normalize(candidate);
+      if (language) return language;
+    }
+
+    // Translator API 支持的系统语言中无法匹配时，使用最通用的英文兜底。
+    return "en";
+  }
 
   function toDisplayCode(language) {
     if (language === "iw") return "he";
@@ -35,6 +74,8 @@
   globalThis.LocalTranslatorLanguages = Object.freeze({
     all: languages.map(([code, nativeName]) => ({ code, nativeName })),
     nativeNames,
+    normalize,
+    getSystemLanguage,
     getDisplayName
   });
 })();

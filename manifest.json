@@ -3,14 +3,14 @@
   "name": "__MSG_appName__",
   "default_locale": "en",
   "description": "__MSG_appDescription__",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "minimum_chrome_version": "138",
   "permissions": ["scripting", "storage"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
+      "js": ["languages.js", "content.js"],
       "run_at": "document_idle"
     }
   ],

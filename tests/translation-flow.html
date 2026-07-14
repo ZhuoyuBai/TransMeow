@@ -29,6 +29,9 @@
           }
         },
         i18n: {
+          getUILanguage() {
+            return "zh-TW";
+          },
           async detectLanguage() {
             return { languages: [{ language: "en", percentage: 100 }] };
           }
@@ -76,9 +79,13 @@
       </article>
     </main>
 
+    <script src="../languages.js"></script>
     <script src="../content.js"></script>
     <script>
       addEventListener("load", () => {
+        document.body.dataset.systemLanguageDefault = String(
+          globalThis.LocalTranslatorLanguages.getSystemLanguage() === "zh-Hant"
+        );
         // 触发后台翻译（content.js 持有 translator 实例异步进行）
         globalThis.__contentMessageListener(
           { type: "start-translation", sourceLanguage: "en", targetLanguage: "zh" },

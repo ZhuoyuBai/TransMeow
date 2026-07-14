@@ -58,7 +58,7 @@
 
 ## 7. Chrome Web Store Limited Use
 
-本扩展对通过 Chrome API 获得的信息的使用遵守 Chrome Web Store User Data Policy，包括 Limited Use 要求。相关数据只用于提供或改进用户可见的网页翻译功能，不用于广告，也不会出售或转移给第三方。
+本扩展对从 Google API（包括 Chrome API）获得的信息的使用遵守 Chrome Web Store User Data Policy，包括 Limited Use 要求。相关数据只用于提供或改进用户可见的网页翻译功能，不用于广告，也不会出售或转移给第三方。
 
 ## 8. 隐私政策变更
 
@@ -66,7 +66,7 @@
 
 ## 9. 联系方式
 
-如果对本隐私政策或本扩展的数据处理方式有疑问，请通过 [TransMeowCode GitHub Issues](https://github.com/ZhuoyuBai/TransMeowCode/issues) 联系开发者。
+如果对本隐私政策或本扩展的数据处理方式有疑问，请通过 [TransMeow GitHub Issues](https://github.com/ZhuoyuBai/TransMeow/issues) 联系开发者。
 
 ---
 
@@ -130,7 +130,7 @@ The Extension uses these permissions only as necessary for its disclosed single 
 
 ## 7. Chrome Web Store Limited Use
 
-Any use of information received from Chrome APIs complies with the Chrome Web Store User Data Policy, including its Limited Use requirements. Such data is used only to provide or improve the user-facing webpage translation functionality. It is not used for advertising and is not sold or transferred to third parties.
+The use of information received from Google APIs, including Chrome APIs, adheres to the Chrome Web Store User Data Policy, including the Limited Use requirements. Such data is used only to provide or improve the user-facing webpage translation functionality. It is not used for advertising and is not sold or transferred to third parties.
 
 ## 8. Changes to this Privacy Policy
 
@@ -138,4 +138,4 @@ If the Extension's data handling practices change materially, this Privacy Polic
 
 ## 9. Contact
 
-For questions about this Privacy Policy or the Extension's data practices, contact the developer through [TransMeowCode GitHub Issues](https://github.com/ZhuoyuBai/TransMeowCode/issues).
+For questions about this Privacy Policy or the Extension's data practices, contact the developer through [TransMeow GitHub Issues](https://github.com/ZhuoyuBai/TransMeow/issues).

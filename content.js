@@ -29,6 +29,8 @@
   const RICH_MARKER_CLOSE = "\ue002";
   const RICH_MARKER_END = "\ue003";
   const MAX_RICH_TRANSLATION_LENGTH = 1600;
+  const getDefaultTargetLanguage = () =>
+    globalThis.LocalTranslatorLanguages?.getSystemLanguage?.() || "en";
   let currentDisplayMode = "translation";
   let displayModeRenderVersion = 0;
   let isRestoring = false;
@@ -1909,7 +1911,8 @@
     translationPageCache = stored.translationPageCache || {};
     cacheDirty = false;
     pageCacheDirty = false;
-    const desiredTargetLanguage = stored.targetLanguage || "zh";
+    const desiredTargetLanguage =
+      stored.targetLanguage || getDefaultTargetLanguage();
     const configuredSourceLanguage = stored.sourceLanguage || "auto";
     let pageRecord = translationPageCache[pageUrl];
     if (
@@ -2881,7 +2884,7 @@
       if (DISPLAY_MODES.has(stored.displayMode)) {
         setDisplayMode(stored.displayMode);
       }
-      const targetLanguage = stored.targetLanguage || "zh";
+      const targetLanguage = stored.targetLanguage || getDefaultTargetLanguage();
       const pageData = await collectSegments();
       if (location.href !== pageUrl || !pageData.segments?.length) return;
 
