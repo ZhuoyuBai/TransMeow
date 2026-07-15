@@ -25,9 +25,7 @@
 
 ### 方式一：从 Chrome 应用商店安装（推荐）
 
-Chrome 应用商店版本即将上线。上线后，点击安装即可自动接收后续更新。
-
-<!-- 商店审核通过后，在这里添加 Chrome 应用商店安装链接。 -->
+[前往 Chrome 应用商店安装翻译喵](https://chromewebstore.google.com/detail/%E7%BF%BB%E8%AF%91%E5%96%B5/ihmphdhbgmkgcodhnjpbhjojgfpmhinl?hl=zh-CN&utm_source=ext_sidebar)。通过应用商店安装后，可以自动接收后续更新。
 
 ### 方式二：手动安装
 
