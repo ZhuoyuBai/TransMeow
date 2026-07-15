@@ -12,6 +12,20 @@ const progressLabel = document.querySelector("#progress-label");
 const progressPercent = document.querySelector("#progress-percent");
 const translationProgress = document.querySelector("#translation-progress");
 const alwaysTranslateSiteInput = document.querySelector("#always-translate-site");
+const quickTranslationInput = document.querySelector("#quick-translation-input");
+const quickTranslationCount = document.querySelector("#quick-translation-count");
+const quickTranslationResult = document.querySelector("#quick-translation-result");
+const quickTranslationLoading = document.querySelector("#quick-translation-loading");
+const quickTranslationPackWarning = document.querySelector(
+  "#quick-translation-pack-warning"
+);
+const quickTranslationPackMessage = document.querySelector(
+  "#quick-translation-pack-message"
+);
+const quickTranslationDownload = document.querySelector(
+  "#quick-translation-download"
+);
+const quickTranslationCopy = document.querySelector("#quick-translation-copy");
 const customSelects = new Map();
 const targetLanguageStatuses = new Map();
 
@@ -27,6 +41,9 @@ let cachedDetectedSegments = null;
 let currentDisplayMode = "translation";
 let cacheEnabled = true;
 let activeHostname = "";
+let quickTranslationTimer = null;
+let quickTranslationRequestId = 0;
+let quickTranslatedText = "";
 
 const DISPLAY_MODES = ["translation", "bilingual"];
 const DISPLAY_MODE_ICONS = {
@@ -369,6 +386,124 @@ async function detectSegmentLanguage(text, fallbackLanguage = "") {
   return fallbackLanguage;
 }
 
+function setQuickTranslationState(state, message = "") {
+  quickTranslationLoading.hidden = state !== "loading";
+  quickTranslationPackWarning.hidden = state !== "pack-required";
+  quickTranslationCopy.hidden = state !== "translated";
+  quickTranslationCopy.classList.remove("is-copied");
+
+  if (state === "translated") {
+    quickTranslatedText = message;
+    quickTranslationResult.textContent = message;
+    return;
+  }
+
+  quickTranslatedText = "";
+  quickTranslationResult.textContent =
+    state === "error" ? message : "";
+  if (state === "pack-required") {
+    quickTranslationPackMessage.textContent = message;
+  }
+}
+
+async function resolveQuickSourceLanguage(text, targetLanguage) {
+  if (sourceLanguageSelect.value !== "auto") {
+    return sourceLanguageSelect.value;
+  }
+
+  const detected = normalizeLanguage(
+    await detectSegmentLanguage(text)
+  );
+  if (SUPPORTED_LANGUAGE_CODES.has(detected)) return detected;
+  return targetLanguage === "en" ? "zh" : "en";
+}
+
+async function translateQuickText(text, requestId) {
+  const targetLanguage = targetLanguageSelect.value;
+
+  try {
+    if (!("Translator" in self)) {
+      throw new Error(i18n.t("translationFailed"));
+    }
+
+    const sourceLanguage = await resolveQuickSourceLanguage(
+      text,
+      targetLanguage
+    );
+    if (requestId !== quickTranslationRequestId) return;
+    if (!sourceLanguage || sourceLanguage === targetLanguage) {
+      throw new Error(i18n.t("sameLanguage"));
+    }
+
+    const options = { sourceLanguage, targetLanguage };
+    const availability = await Translator.availability(options);
+    if (requestId !== quickTranslationRequestId) return;
+    if (availability !== "available") {
+      setQuickTranslationState(
+        "pack-required",
+        i18n.t("downloadLanguagePackFirst", {
+          language: getLanguageName(targetLanguage)
+        })
+      );
+      return;
+    }
+
+    const translator = await Translator.create(options);
+    try {
+      const translatedText = await translator.translate(text);
+      if (requestId !== quickTranslationRequestId) return;
+      setQuickTranslationState("translated", translatedText);
+    } finally {
+      translator.destroy();
+    }
+  } catch (error) {
+    if (requestId !== quickTranslationRequestId) return;
+    setQuickTranslationState(
+      "error",
+      error?.message || i18n.t("translationFailed")
+    );
+  }
+}
+
+function scheduleQuickTranslation(delay = 280) {
+  clearTimeout(quickTranslationTimer);
+  quickTranslationRequestId += 1;
+  const requestId = quickTranslationRequestId;
+  const text = quickTranslationInput.value.trim();
+  quickTranslationCount.textContent = `${quickTranslationInput.value.length} / 100`;
+
+  if (!text) {
+    setQuickTranslationState("idle");
+    return;
+  }
+
+  setQuickTranslationState("loading");
+  quickTranslationTimer = setTimeout(
+    () => translateQuickText(text, requestId),
+    delay
+  );
+}
+
+async function copyQuickTranslation() {
+  if (!quickTranslatedText) return;
+
+  try {
+    await navigator.clipboard.writeText(quickTranslatedText);
+  } catch {
+    const fallback = document.createElement("textarea");
+    fallback.value = quickTranslatedText;
+    fallback.style.position = "fixed";
+    fallback.style.opacity = "0";
+    document.body.append(fallback);
+    fallback.select();
+    document.execCommand("copy");
+    fallback.remove();
+  }
+
+  quickTranslationCopy.classList.add("is-copied");
+  setTimeout(() => quickTranslationCopy.classList.remove("is-copied"), 1200);
+}
+
 async function detectPageSegments(pageData) {
   if (pageData === detectedPageDataRef && cachedDetectedSegments) {
     return cachedDetectedSegments;
@@ -640,6 +775,7 @@ async function initialize() {
 targetLanguageSelect.addEventListener("change", async () => {
   await chrome.storage.local.set({ targetLanguage: targetLanguageSelect.value });
   syncLanguageOptionStates();
+  if (quickTranslationInput.value.trim()) scheduleQuickTranslation(0);
   if (currentPageData) {
     const detectedSegments = await detectPageSegments(currentPageData);
     currentSourceLanguage = resolveSourceLanguage(
@@ -652,6 +788,7 @@ targetLanguageSelect.addEventListener("change", async () => {
 sourceLanguageSelect.addEventListener("change", async () => {
   await chrome.storage.local.set({ sourceLanguage: sourceLanguageSelect.value });
   syncLanguageOptionStates();
+  if (quickTranslationInput.value.trim()) scheduleQuickTranslation(0);
   if (currentPageData) {
     const detectedSegments = await detectPageSegments(currentPageData);
     currentSourceLanguage = resolveSourceLanguage(
@@ -802,6 +939,11 @@ alwaysTranslateSiteInput.addEventListener("change", async () => {
 
 translateButton.addEventListener("click", handlePrimaryAction);
 displayModeButton.addEventListener("click", cycleDisplayMode);
+quickTranslationInput.addEventListener("input", () => scheduleQuickTranslation());
+quickTranslationCopy.addEventListener("click", copyQuickTranslation);
+quickTranslationDownload.addEventListener("click", () => {
+  chrome.runtime.openOptionsPage();
+});
 openSettingsButton.addEventListener("click", () => {
   chrome.runtime.openOptionsPage();
 });

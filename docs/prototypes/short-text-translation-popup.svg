@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="660" viewBox="0 0 760 660">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#1f2328" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      text { font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif; fill: #202124; }
+      .muted { fill: #8a8d91; }
+      .tiny { font-size: 9px; }
+      .small { font-size: 10px; }
+      .body { font-size: 11px; }
+      .label { font-size: 12px; font-weight: 650; }
+      .title { font-size: 14px; font-weight: 700; }
+      .board-title { font-size: 20px; font-weight: 700; }
+      .lang { font-size: 13px; font-weight: 650; }
+      .strong { font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="760" height="660" fill="#f5f5f7"/>
+  <text class="board-title" x="30" y="36">短文本翻译 · 弹窗原型</text>
+  <text class="label muted" x="30" y="58">保持现有 320px 弹窗宽度；左为正常翻译状态，右为语言包缺失状态。</text>
+
+  <text class="body strong" x="32" y="88" fill="#686b71">A. 正常翻译</text>
+  <text class="body strong" x="376" y="88" fill="#686b71">B. 目标语言包未下载</text>
+
+  <g transform="translate(30 100)">
+    <rect width="320" height="468" fill="#fff" stroke="#e7e7ea" filter="url(#shadow)"/>
+    <g transform="translate(14 14)">
+      <rect width="32" height="32" rx="5" fill="#111214"/>
+      <text x="5" y="14" font-size="10" font-weight="700" fill="#fff">中</text>
+      <text x="17" y="26" font-size="13" font-weight="700" fill="#fff">A</text>
+      <text class="title" x="40" y="14">翻译喵</text>
+      <text class="small muted" x="40" y="28">免费的本地化翻译服务</text>
+      <text x="267" y="23" font-size="18" fill="#74777d">⚙</text>
+
+      <g transform="translate(0 44)">
+        <rect width="122" height="48" rx="8" fill="#f7f7f8" stroke="#ececf0"/>
+        <text class="lang" x="8" y="20">自动检测</text><text class="body muted" x="105" y="18">⌄</text>
+        <text class="small muted" x="8" y="36">原文语言</text>
+        <text x="133" y="28" font-size="16" fill="#9a9ca1">→</text>
+        <rect x="156" width="136" height="48" rx="8" fill="#f7f7f8" stroke="#ececf0"/>
+        <text class="lang" x="164" y="20">简体中文</text><text class="body muted" x="275" y="18">⌄</text>
+        <text class="small muted" x="164" y="36">目标语言</text>
+      </g>
+
+      <rect x="0" y="104" width="52" height="36" rx="8" fill="#f7f7f8" stroke="#ececf0"/>
+      <text x="22" y="127" font-size="13" font-weight="750" fill="#4b4e54">A</text>
+      <rect x="58" y="104" width="234" height="36" rx="8" fill="#ec4899"/>
+      <text x="130" y="127" font-size="13" font-weight="750" fill="#fff">翻译当前页面</text>
+
+      <text class="label strong" x="0" y="165">短文本翻译</text>
+      <text class="tiny muted" x="215" y="165">粘贴后自动翻译</text>
+
+      <rect x="0" y="173" width="142.5" height="100" rx="9" fill="#fff" stroke="#f3a8c9"/>
+      <rect x="-2" y="171" width="146.5" height="104" rx="11" fill="none" stroke="#ec4899" stroke-opacity=".08" stroke-width="4"/>
+      <text class="body" x="9" y="194">The best way to</text>
+      <text class="body" x="9" y="211">predict the future is</text>
+      <text class="body" x="9" y="228">to create it.</text>
+      <text class="tiny muted" x="102" y="262">52 / 100</text>
+
+      <rect x="149.5" y="173" width="142.5" height="100" rx="9" fill="#fafafb" stroke="#e5e6e9"/>
+      <text class="body" x="159" y="194">预测未来最好的</text>
+      <text class="body" x="159" y="211">方式，就是亲手</text>
+      <text class="body" x="159" y="228">创造它。</text>
+      <rect x="258" y="239" width="26" height="26" rx="6" fill="#fff" stroke="#dedfe3"/>
+      <rect x="267" y="247" width="8" height="9" rx="1" fill="none" stroke="#56595f" stroke-width="1.3"/>
+      <path d="M265 254h-1a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2" fill="none" stroke="#56595f" stroke-width="1.3"/>
+
+      <text class="tiny" x="2" y="290" fill="#16803a">✓ 已翻译为简体中文</text>
+
+      <text class="label strong" x="4" y="329">总是翻译该网站</text>
+      <rect x="256" y="314" width="36" height="20" rx="10" fill="#d1d5db"/>
+      <circle cx="266" cy="324" r="8" fill="#fff"/>
+    </g>
+  </g>
+
+  <g transform="translate(374 100)">
+    <rect width="320" height="468" fill="#fff" stroke="#e7e7ea" filter="url(#shadow)"/>
+    <g transform="translate(14 14)">
+      <rect width="32" height="32" rx="5" fill="#111214"/>
+      <text x="5" y="14" font-size="10" font-weight="700" fill="#fff">中</text>
+      <text x="17" y="26" font-size="13" font-weight="700" fill="#fff">A</text>
+      <text class="title" x="40" y="14">翻译喵</text>
+      <text class="small muted" x="40" y="28">免费的本地化翻译服务</text>
+      <text x="267" y="23" font-size="18" fill="#74777d">⚙</text>
+
+      <g transform="translate(0 44)">
+        <rect width="122" height="48" rx="8" fill="#f7f7f8" stroke="#ececf0"/>
+        <text class="lang" x="8" y="20">自动检测</text><text class="body muted" x="105" y="18">⌄</text>
+        <text class="small muted" x="8" y="36">原文语言</text>
+        <text x="133" y="28" font-size="16" fill="#9a9ca1">→</text>
+        <rect x="156" width="136" height="48" rx="8" fill="#f7f7f8" stroke="#ececf0"/>
+        <text class="lang" x="164" y="20">日语</text><text class="body muted" x="275" y="18">⌄</text>
+        <text class="small muted" x="164" y="36">目标语言</text>
+      </g>
+
+      <rect x="0" y="104" width="52" height="36" rx="8" fill="#f7f7f8" stroke="#ececf0"/>
+      <text x="22" y="127" font-size="13" font-weight="750" fill="#4b4e54">A</text>
+      <rect x="58" y="104" width="234" height="36" rx="8" fill="#ec4899"/>
+      <text x="130" y="127" font-size="13" font-weight="750" fill="#fff">翻译当前页面</text>
+
+      <text class="label strong" x="0" y="165">短文本翻译</text>
+      <text class="tiny muted" x="215" y="165">粘贴后自动翻译</text>
+
+      <rect x="0" y="173" width="142.5" height="100" rx="9" fill="#fff" stroke="#f3a8c9"/>
+      <text class="body" x="9" y="194">今天也要认真生活。</text>
+      <text class="tiny muted" x="110" y="262">9 / 100</text>
+      <rect x="149.5" y="173" width="142.5" height="100" rx="9" fill="#fafafb" stroke="#e5e6e9"/>
+      <text class="body muted" x="159" y="194">译文会显示在这里</text>
+      <rect x="258" y="239" width="26" height="26" rx="6" fill="#fff" stroke="#dedfe3"/>
+      <rect x="267" y="247" width="8" height="9" rx="1" fill="none" stroke="#56595f" stroke-width="1.3"/>
+      <path d="M265 254h-1a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2" fill="none" stroke="#56595f" stroke-width="1.3"/>
+
+      <rect x="0" y="281" width="292" height="42" rx="8" fill="#fdf2f8" stroke="#f6c4da"/>
+      <text class="tiny" x="8" y="298" fill="#7c294d">尚未下载日语语言包，</text>
+      <text class="tiny" x="8" y="311" fill="#7c294d">暂时无法翻译。</text>
+      <text class="tiny strong" x="238" y="305" fill="#b42368">去下载 →</text>
+
+      <text class="label strong" x="4" y="362">总是翻译该网站</text>
+      <rect x="256" y="347" width="36" height="20" rx="10" fill="#d1d5db"/>
+      <circle cx="266" cy="357" r="8" fill="#fff"/>
+    </g>
+  </g>
+
+  <rect x="30" y="590" width="664" height="48" rx="10" fill="#fff"/>
+  <text class="body" x="46" y="611"><tspan font-weight="700">交互约定：</tspan>输入框最多 100 个字符；粘贴或停止输入后自动翻译；输出语言跟随“目标语言”；</text>
+  <text class="body" x="46" y="628">复制按钮只复制译文；缺少语言包时不发起翻译，并提供“去下载”入口。</text>
+</svg>

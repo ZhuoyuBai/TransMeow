@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>翻译喵：短文本翻译原型</title>
+    <style>
+      :root {
+        font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+        color: #202124;
+        background: #f5f5f7;
+        --accent: #ec4899;
+        --accent-strong: #b42368;
+        --accent-soft: #fdf2f8;
+        --accent-border: #f3a8c9;
+      }
+
+      * { box-sizing: border-box; }
+
+      body { margin: 0; }
+
+      .prototype-board {
+        width: 760px;
+        min-height: 660px;
+        padding: 30px;
+        margin: 0 auto;
+      }
+
+      .board-title {
+        margin: 0 0 6px;
+        font-size: 20px;
+      }
+
+      .board-note {
+        margin: 0 0 22px;
+        color: #73767c;
+        font-size: 12px;
+      }
+
+      .states {
+        display: grid;
+        grid-template-columns: 320px 320px;
+        gap: 24px;
+        align-items: start;
+      }
+
+      .state-label {
+        margin: 0 0 8px 2px;
+        color: #686b71;
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .popup-shell {
+        width: 320px;
+        padding: 14px;
+        border: 1px solid #e7e7ea;
+        background: #ffffff;
+        box-shadow: 0 14px 36px rgb(31 35 40 / 12%);
+      }
+
+      .brand-row {
+        display: grid;
+        grid-template-columns: 32px minmax(0, 1fr) 30px;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .brand-mark {
+        width: 32px;
+        height: 32px;
+        border-radius: 5px;
+      }
+
+      h2, p { margin: 0; }
+
+      h2 { font-size: 14px; line-height: 1.3; }
+
+      .tagline {
+        margin-top: 1px;
+        color: #8a8d91;
+        font-size: 10px;
+      }
+
+      .settings {
+        display: grid;
+        width: 30px;
+        height: 30px;
+        place-items: center;
+        border-radius: 8px;
+        color: #74777d;
+        font-size: 18px;
+      }
+
+      .language-row {
+        display: grid;
+        grid-template-columns: minmax(0, .9fr) 20px minmax(0, 1.1fr);
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .language-card {
+        min-height: 48px;
+        padding: 6px 8px;
+        border: 1px solid #ececf0;
+        border-radius: 8px;
+        background: #f7f7f8;
+      }
+
+      .language-name {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .language-caption {
+        margin-top: 2px;
+        color: #9a9ca1;
+        font-size: 10px;
+      }
+
+      .arrow { color: #9a9ca1; text-align: center; }
+
+      .quick-title-row {
+        display: flex;
+        margin-top: 12px;
+        margin-bottom: 7px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .quick-title {
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .auto-hint {
+        color: #9a9ca1;
+        font-size: 9px;
+      }
+
+      .text-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 7px;
+      }
+
+      .text-box {
+        position: relative;
+        min-height: 100px;
+        padding: 10px 9px 27px;
+        border: 1px solid #e5e6e9;
+        border-radius: 9px;
+        background: #ffffff;
+        color: #35383d;
+        font-size: 11px;
+        line-height: 1.55;
+      }
+
+      .text-box.input {
+        border-color: var(--accent-border);
+        box-shadow: 0 0 0 3px rgb(236 72 153 / 8%);
+      }
+
+      .text-box.output { background: #fafafb; }
+
+      .placeholder { color: #a2a5aa; }
+
+      .counter {
+        position: absolute;
+        right: 9px;
+        bottom: 8px;
+        color: #a2a5aa;
+        font-size: 9px;
+      }
+
+      .copy-button {
+        position: absolute;
+        display: grid;
+        right: 7px;
+        bottom: 6px;
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        place-items: center;
+        border: 1px solid #dedfe3;
+        border-radius: 6px;
+        color: #56595f;
+        background: #ffffff;
+      }
+
+      .copy-button svg {
+        width: 13px;
+        height: 13px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linejoin: round;
+        stroke-width: 1.7;
+      }
+
+      .quick-status {
+        min-height: 17px;
+        margin: 6px 2px 9px;
+        color: #7b7e84;
+        font-size: 9px;
+      }
+
+      .quick-status.success { color: #16803a; }
+
+      .pack-warning {
+        display: flex;
+        min-height: 36px;
+        margin: 7px 0 10px;
+        padding: 7px 8px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        border: 1px solid #f6c4da;
+        border-radius: 8px;
+        color: #7c294d;
+        background: var(--accent-soft);
+        font-size: 9px;
+        line-height: 1.35;
+      }
+
+      .download-link {
+        flex: 0 0 auto;
+        color: var(--accent-strong);
+        font-weight: 750;
+      }
+
+      .divider {
+        display: flex;
+        margin: 3px 0 9px;
+        align-items: center;
+        gap: 8px;
+        color: #a1a4a9;
+        font-size: 9px;
+      }
+
+      .divider::before,
+      .divider::after {
+        height: 1px;
+        flex: 1;
+        background: #efeff1;
+        content: "";
+      }
+
+      .action-row {
+        display: grid;
+        grid-template-columns: 52px minmax(0, 1fr);
+        gap: 6px;
+      }
+
+      .mode-button,
+      .translate-button {
+        height: 36px;
+        border-radius: 8px;
+      }
+
+      .mode-button {
+        display: grid;
+        place-items: center;
+        border: 1px solid #ececf0;
+        color: #4b4e54;
+        background: #f7f7f8;
+        font-size: 13px;
+        font-weight: 750;
+      }
+
+      .translate-button {
+        display: grid;
+        place-items: center;
+        color: #ffffff;
+        background: var(--accent);
+        box-shadow: 0 6px 12px rgb(236 72 153 / 18%);
+        font-size: 13px;
+        font-weight: 750;
+      }
+
+      .site-row {
+        display: flex;
+        min-height: 36px;
+        margin-top: 10px;
+        padding: 5px 4px;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .switch {
+        width: 36px;
+        height: 20px;
+        padding: 2px;
+        border-radius: 999px;
+        background: #d1d5db;
+      }
+
+      .switch::after {
+        display: block;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #ffffff;
+        box-shadow: 0 1px 3px rgb(0 0 0 / 20%);
+        content: "";
+      }
+
+      .annotation {
+        margin-top: 22px;
+        padding: 14px 16px;
+        border-radius: 10px;
+        background: #ffffff;
+        color: #5c5f65;
+        font-size: 11px;
+        line-height: 1.65;
+      }
+
+      .annotation strong { color: #25272b; }
+    </style>
+  </head>
+  <body>
+    <main class="prototype-board">
+      <h1 class="board-title">短文本翻译 · 弹窗原型</h1>
+      <p class="board-note">保持现有 320px 弹窗宽度；左为正常翻译状态，右为语言包缺失状态。</p>
+
+      <section class="states">
+        <article>
+          <p class="state-label">A. 正常翻译</p>
+          <div class="popup-shell">
+            <header class="brand-row">
+              <img class="brand-mark" src="../../icons/icon-128.png" alt="" />
+              <div><h2>翻译喵</h2><p class="tagline">免费的本地化翻译服务</p></div>
+              <span class="settings">⚙</span>
+            </header>
+
+            <section class="language-row">
+              <div class="language-card"><div class="language-name">自动检测 <span>⌄</span></div><p class="language-caption">原文语言</p></div>
+              <span class="arrow">→</span>
+              <div class="language-card"><div class="language-name">简体中文 <span>⌄</span></div><p class="language-caption">目标语言</p></div>
+            </section>
+
+            <div class="action-row"><div class="mode-button">A</div><div class="translate-button">翻译当前页面</div></div>
+            <section>
+              <div class="quick-title-row"><strong class="quick-title">短文本翻译</strong><span class="auto-hint">粘贴后自动翻译</span></div>
+              <div class="text-grid">
+                <div class="text-box input">The best way to predict the future is to create it.<span class="counter">52 / 100</span></div>
+                <div class="text-box output">预测未来最好的方式，就是亲手创造它。<button class="copy-button" aria-label="复制译文"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="8" height="8" rx="1"/><path d="M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1h7A1.5 1.5 0 0 1 11 2.5V3"/></svg></button></div>
+              </div>
+              <p class="quick-status success">✓ 已翻译为简体中文</p>
+            </section>
+
+            <div class="site-row"><span>总是翻译该网站</span><span class="switch"></span></div>
+          </div>
+        </article>
+
+        <article>
+          <p class="state-label">B. 目标语言包未下载</p>
+          <div class="popup-shell">
+            <header class="brand-row">
+              <img class="brand-mark" src="../../icons/icon-128.png" alt="" />
+              <div><h2>翻译喵</h2><p class="tagline">免费的本地化翻译服务</p></div>
+              <span class="settings">⚙</span>
+            </header>
+
+            <section class="language-row">
+              <div class="language-card"><div class="language-name">自动检测 <span>⌄</span></div><p class="language-caption">原文语言</p></div>
+              <span class="arrow">→</span>
+              <div class="language-card"><div class="language-name">日语 <span>⌄</span></div><p class="language-caption">目标语言</p></div>
+            </section>
+
+            <div class="action-row"><div class="mode-button">A</div><div class="translate-button">翻译当前页面</div></div>
+            <section>
+              <div class="quick-title-row"><strong class="quick-title">短文本翻译</strong><span class="auto-hint">粘贴后自动翻译</span></div>
+              <div class="text-grid">
+                <div class="text-box input">今天也要认真生活。<span class="counter">9 / 100</span></div>
+                <div class="text-box output"><span class="placeholder">译文会显示在这里</span><button class="copy-button" aria-label="复制译文"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="8" height="8" rx="1"/><path d="M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1h7A1.5 1.5 0 0 1 11 2.5V3"/></svg></button></div>
+              </div>
+              <div class="pack-warning"><span>尚未下载日语语言包，暂时无法翻译。</span><span class="download-link">去下载 →</span></div>
+            </section>
+
+            <div class="site-row"><span>总是翻译该网站</span><span class="switch"></span></div>
+          </div>
+        </article>
+      </section>
+
+      <div class="annotation"><strong>交互约定：</strong>输入框最多 100 个字符；粘贴或输入停止后自动翻译；输出语言始终跟随上方“目标语言”；复制按钮只复制译文；缺少语言包时不发起翻译，并提供“去下载”入口。</div>
+    </main>
+  </body>
+</html>

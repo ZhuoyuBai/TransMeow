@@ -83,6 +83,50 @@
         </div>
       </section>
 
+      <section class="quick-translation" aria-label="短文本翻译" data-i18n-aria-label="quickTranslation">
+        <div class="quick-text-box quick-input-box">
+          <textarea
+            id="quick-translation-input"
+            maxlength="100"
+            aria-label="输入要翻译的文本"
+            data-i18n-aria-label="quickTranslationInput"
+          ></textarea>
+          <span id="quick-translation-count" class="quick-character-count" aria-hidden="true">0 / 100</span>
+        </div>
+
+        <div
+          id="quick-translation-output"
+          class="quick-text-box quick-output-box"
+          role="status"
+          aria-live="polite"
+          aria-label="翻译结果"
+          data-i18n-aria-label="quickTranslationOutput"
+        >
+          <span id="quick-translation-result" class="quick-translation-result"></span>
+          <span id="quick-translation-loading" class="quick-translation-loading" hidden>
+            <span class="quick-loading-spinner" aria-hidden="true"></span>
+            <span data-i18n="translating">翻译中</span>
+          </span>
+          <span id="quick-translation-pack-warning" class="quick-pack-warning" hidden>
+            <span id="quick-translation-pack-message"></span>
+            <button id="quick-translation-download" class="quick-download-link" type="button" data-i18n="goDownload">去下载</button>
+          </span>
+          <button
+            id="quick-translation-copy"
+            class="quick-copy-button"
+            type="button"
+            aria-label="复制译文"
+            data-i18n-aria-label="copyTranslation"
+            hidden
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <rect x="5" y="5" width="8" height="8" rx="1" />
+              <path d="M3 11h-.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1h7A1.5 1.5 0 0 1 11 2.5V3" />
+            </svg>
+          </button>
+        </div>
+      </section>
+
       <section class="site-preference-card">
         <div class="site-preference-label">
           <strong data-i18n="alwaysTranslate">总是翻译该网站</strong>

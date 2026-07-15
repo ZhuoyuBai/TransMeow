@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Popup short text fixture</title>
+    <link rel="stylesheet" href="../theme.css" />
+    <link rel="stylesheet" href="../popup.css" />
+  </head>
+  <body>
+    <script>
+      function delay(milliseconds) {
+        return new Promise((resolve) => setTimeout(resolve, milliseconds));
+      }
+
+      function installMocks() {
+        globalThis.__availability = "available";
+        globalThis.__translatorCreates = 0;
+        globalThis.__translatorDestroys = 0;
+        globalThis.__settingsOpened = 0;
+
+        globalThis.chrome = {
+          storage: {
+            local: {
+              async get() {
+                return {
+                  sourceLanguage: "en",
+                  targetLanguage: "zh",
+                  displayMode: "translation",
+                  cacheEnabled: true,
+                  alwaysTranslateSites: []
+                };
+              },
+              async set() {}
+            },
+            onChanged: { addListener() {} }
+          },
+          tabs: {
+            async query() {
+              return [{ id: 7, url: "https://example.com/article" }];
+            },
+            async sendMessage(_tabId, message) {
+              if (message.type === "set-display-mode") {
+                return { ok: true, mode: message.mode };
+              }
+              if (message.type === "get-page-state") {
+                return { translated: false, translating: false };
+              }
+              if (message.type === "collect-segments") {
+                return {
+                  pageLanguage: "en",
+                  segments: [{ id: "fixture", text: "Fixture page text" }]
+                };
+              }
+              return { ok: true };
+            }
+          },
+          scripting: { async executeScript() {} },
+          i18n: {
+            async detectLanguage() {
+              return { languages: [{ language: "en", percentage: 100 }] };
+            }
+          },
+          runtime: {
+            onMessage: { addListener() {} },
+            async sendMessage() {},
+            connect() { return {}; },
+            openOptionsPage() { globalThis.__settingsOpened += 1; }
+          },
+          permissions: {
+            async request() { return true; },
+            async remove() { return true; }
+          }
+        };
+
+        globalThis.Translator = {
+          async availability() {
+            return globalThis.__availability;
+          },
+          async create() {
+            globalThis.__translatorCreates += 1;
+            return {
+              async translate(text) {
+                await delay(60);
+                return `译文：${text}`;
+              },
+              destroy() { globalThis.__translatorDestroys += 1; }
+            };
+          }
+        };
+      }
+
+      function loadScript(source) {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = source;
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.append(script);
+        });
+      }
+
+      async function run() {
+        installMocks();
+        const popupHtml = await fetch("../popup.html").then((response) => response.text());
+        const parsed = new DOMParser().parseFromString(popupHtml, "text/html");
+        const popupChildren = Array.from(parsed.body.children)
+          .filter((element) => element.tagName !== "SCRIPT")
+          .map((element) => document.importNode(element, true));
+        document.body.replaceChildren(...popupChildren);
+        document.body.dataset.i18nPageTitle = "brandName";
+
+        await loadScript("../languages.js");
+        await loadScript("../i18n.js");
+        await loadScript("../theme.js");
+        await loadScript("../popup.js");
+        await delay(180);
+
+        const translationCard = document.querySelector(".translation-card");
+        const quickTranslation = document.querySelector(".quick-translation");
+        const sitePreference = document.querySelector(".site-preference-card");
+        const input = document.querySelector("#quick-translation-input");
+        const loading = document.querySelector("#quick-translation-loading");
+        const result = document.querySelector("#quick-translation-result");
+        const copyButton = document.querySelector("#quick-translation-copy");
+        const packWarning = document.querySelector(
+          "#quick-translation-pack-warning"
+        );
+
+        document.body.dataset.correctOrder = String(
+          Boolean(
+            translationCard.compareDocumentPosition(quickTranslation) &
+              Node.DOCUMENT_POSITION_FOLLOWING
+          ) &&
+          Boolean(
+            quickTranslation.compareDocumentPosition(sitePreference) &
+              Node.DOCUMENT_POSITION_FOLLOWING
+          )
+        );
+        document.body.dataset.twoBoxesOnly = String(
+          quickTranslation.children.length === 2 &&
+          !quickTranslation.querySelector("h1, h2, h3, p")
+        );
+        document.body.dataset.maxLength = String(input.maxLength === 100);
+        document.body.dataset.copyIconOnly = String(
+          Boolean(copyButton.querySelector("svg")) && !copyButton.textContent.trim()
+        );
+
+        input.value = "Hello world";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        document.body.dataset.loadingImmediate = String(
+          !loading.hidden && loading.textContent.includes("翻译中")
+        );
+
+        await delay(380);
+        document.body.dataset.translated = String(
+          result.textContent === "译文：Hello world" && !copyButton.hidden
+        );
+        document.body.dataset.translatorDestroyed = String(
+          globalThis.__translatorDestroys === 1
+        );
+
+        globalThis.__availability = "downloadable";
+        input.value = "Needs package";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        const createsBeforeWarning = globalThis.__translatorCreates;
+        await delay(330);
+        document.body.dataset.packPrompted = String(
+          !packWarning.hidden && packWarning.textContent.includes("语言包")
+        );
+        document.body.dataset.noAutoDownload = String(
+          globalThis.__translatorCreates === createsBeforeWarning
+        );
+
+        const popupShellStyle = getComputedStyle(
+          document.querySelector(".popup-shell")
+        );
+        document.body.dataset.bottomSpacingPreserved = String(
+          popupShellStyle.paddingBottom === "14px"
+        );
+        document.body.dataset.testComplete = "true";
+      }
+
+      run().catch((error) => {
+        document.body.dataset.failure = error.message;
+        document.body.dataset.testComplete = "true";
+      });
+    </script>
+  </body>
+</html>

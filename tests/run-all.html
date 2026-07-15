@@ -36,6 +36,7 @@
         { file: "long-segment.html", expect: { longTextComplete: "true", chunkCount: "3" }, validate: (data) => Number(data.maximumChunk) <= 1800 ? [] : ["maximumChunk<=1800"] },
         { file: "mixed-language-page.html", expect: { segmentCount: "2", anchorCount: "2" } },
         { file: "performance-page.html", expect: { segmentCount: "600", preparedScanReused: "true", mainThreadYielded: "true", progressThrottled: "true", styleChurnIgnored: "true", globalMutationIgnored: "true" } },
+        { file: "popup-short-text.html", allTrue: ["correctOrder", "twoBoxesOnly", "maxLength", "copyIconOnly", "loadingImmediate", "translated", "translatorDestroyed", "packPrompted", "noAutoDownload", "bottomSpacingPreserved"] },
         { file: "recollect-translated.html", allTrue: ["idStable", "originalTextStable"] },
         { file: "rich-text-preservation.html", allTrue: ["translationNodesPreserved", "translationInteractionPreserved", "translationHrefPreserved", "translationFormattingPreserved", "codePreserved", "markerFallbackPreserved", "bilingualRichClone", "noDuplicateIds", "originalMarkupRestored", "originalNodesRestored", "originalInteractionRestored"] },
         { file: "semantic-page.html", expect: { segmentCount: "4", anchorCount: "4", translationCount: "4", inPlaceTranslationCount: "4", originalModeTargetCount: "0", bilingualVisibleOriginalCount: "4", bilingualVisibleTranslationCount: "4", restoredTranslationCount: "0", restoredHiddenCount: "0" } },

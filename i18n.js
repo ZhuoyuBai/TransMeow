@@ -31,6 +31,12 @@
     onlyTranslation: "Translation only",
     bilingual: "Bilingual",
     translating: "Translating",
+    quickTranslation: "Short text translation",
+    quickTranslationInput: "Text to translate",
+    quickTranslationOutput: "Translation result",
+    copyTranslation: "Copy translation",
+    downloadLanguagePackFirst: "Download the {language} language pack first",
+    goDownload: "Download",
     translationComplete: "Translation complete",
     downloaded: "Downloaded",
     notDownloaded: "Not downloaded",
@@ -158,8 +164,16 @@
 
   // 高频动态文案单独集中维护，避免模型列表和缓存操作在非英语界面中
   // 因为运行时生成而退回英文。极少见的诊断错误仍以英文作为安全兜底。
+  Object.assign(dictionaries["zh-CN"], {
+    quickTranslation: "短文本翻译",
+    quickTranslationInput: "输入要翻译的文本",
+    quickTranslationOutput: "翻译结果",
+    copyTranslation: "复制译文",
+    downloadLanguagePackFirst: "请先下载{language}语言包",
+    goDownload: "去下载"
+  });
   Object.assign(dictionaries["zh-TW"], {
-    colorTheme: "界面配色", colorThemeDesc: "選擇擴充功能的強調色", themePink: "粉紅色", themeGreen: "綠色", themePurple: "紫色", themeBlue: "藍色", themeYellow: "黃色", alwaysTranslateSites: "一律翻譯的網站", alwaysTranslateSitesDesc: "開啟這些網站時會自動翻譯，清單只儲存在本機", noAlwaysTranslateSites: "尚無一律翻譯的網站", siteCount: "{count} 個網站", remove: "刪除", removeSite: "從一律翻譯的網站中刪除 {site}", siteRemoved: "已刪除 {site}，之後將不再自動翻譯", sitePermissionDenied: "必須允許存取此網站，之後才能自動翻譯"
+    quickTranslation: "短文字翻譯", quickTranslationInput: "輸入要翻譯的文字", quickTranslationOutput: "翻譯結果", copyTranslation: "複製譯文", downloadLanguagePackFirst: "請先下載{language}語言包", goDownload: "前往下載", colorTheme: "界面配色", colorThemeDesc: "選擇擴充功能的強調色", themePink: "粉紅色", themeGreen: "綠色", themePurple: "紫色", themeBlue: "藍色", themeYellow: "黃色", alwaysTranslateSites: "一律翻譯的網站", alwaysTranslateSitesDesc: "開啟這些網站時會自動翻譯，清單只儲存在本機", noAlwaysTranslateSites: "尚無一律翻譯的網站", siteCount: "{count} 個網站", remove: "刪除", removeSite: "從一律翻譯的網站中刪除 {site}", siteRemoved: "已刪除 {site}，之後將不再自動翻譯", sitePermissionDenied: "必須允許存取此網站，之後才能自動翻譯"
   });
   Object.assign(dictionaries.es, {
     clickDownload: "Haz clic para descargar el paquete", languageCode: "Código de idioma: {language}", installedSummary: "{count} paquetes de idioma instalados", unavailableSummary: "Solo se descargan cuando hacen falta; {count} no están disponibles", modelChecking: "Comprobando los modelos visibles para esta extensión…", cacheEnabled: "Caché de traducción activada", cacheDisabled: "Caché de traducción desactivada", cacheCleared: "Caché de traducción borrada"
